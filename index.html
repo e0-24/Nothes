@@ -1,0 +1,1328 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Mis Notas</title>
+
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#CC1919">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Notas">
+    <link rel="apple-touch-icon" href="icon.svg">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #E5E5EA;
+            --sidebar-color: #D1D1D6;
+            --accent-red: #CC1919;
+            --fan-coral: #DD6B66;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: #1C1C1E;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+        .bg-lined {
+            background-color: #fff;
+            background-image: repeating-linear-gradient(transparent, transparent 39px, #E5E5EA 39px, #E5E5EA 40px);
+            background-attachment: local;
+        }
+        .bg-grid {
+            background-color: #fff;
+            background-size: 30px 30px;
+            background-image: linear-gradient(to right, #E5E5EA 1px, transparent 1px),
+                              linear-gradient(to bottom, #E5E5EA 1px, transparent 1px);
+            background-attachment: local;
+        }
+        .bg-dotted {
+            background-color: #fff;
+            background-image: radial-gradient(#AEAEB2 1px, transparent 1px);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+            background-attachment: local;
+        }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #C7C7CC; border-radius: 10px; }
+        [contenteditable] { user-select: text; }
+        [contenteditable]:empty:before {
+            content: attr(placeholder);
+            color: #9CA3AF;
+            pointer-events: none;
+            display: block;
+        }
+        .sidebar-text { transition: opacity 0.2s ease, width 0.2s ease; }
+        input[type="time"]::-webkit-calendar-picker-indicator { cursor: pointer; }
+        #fab-container { bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px)); }
+        .fab-cal-add  { bottom: calc(2.5rem + env(safe-area-inset-bottom, 0px)); }
+        #view-calendar { padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px)); }
+    </style>
+</head>
+<body class="h-screen w-screen overflow-hidden flex relative">
+
+    <!-- Context Menu (ya sin el submenú falso de compartir) -->
+    <div id="note-context-menu" class="fixed hidden bg-[#656565]/95 backdrop-blur-md text-[#F2F2F7] w-52 rounded-xl shadow-2xl z-[100] flex-col py-2 text-[15px] font-medium border border-white/10" oncontextmenu="return false;">
+        <button onclick="showFolderSubmenu(event)" class="px-5 py-2.5 text-left hover:bg-white/10 transition-colors w-full tracking-wide flex justify-between items-center">Mover a <i class="ph-bold ph-caret-right"></i></button>
+        <button onclick="openSendModal()" class="px-5 py-2.5 text-left hover:bg-white/10 transition-colors w-full tracking-wide">Compartir</button>
+        <button onclick="downloadPDF()" class="px-5 py-2.5 text-left hover:bg-white/10 transition-colors w-full tracking-wide">Descargar PDF</button>
+        <button id="btn-share-mark" onclick="toggleShareMark()" class="px-5 py-2.5 text-left hover:bg-white/10 transition-colors w-full tracking-wide border-t border-white/10">Marcar como compartida</button>
+        <button id="btn-privacy" onclick="togglePrivacy()" class="px-5 py-2.5 text-left hover:bg-white/10 transition-colors w-full tracking-wide">Hacer privada</button>
+        <button onclick="moveToTrash()" class="px-5 py-2.5 text-left hover:bg-white/10 transition-colors w-full tracking-wide text-[#DD6B6B] border-t border-white/10">Eliminar</button>
+    </div>
+
+    <div id="folder-submenu" class="fixed hidden bg-[#656565]/95 backdrop-blur-md text-[#F2F2F7] w-48 rounded-xl shadow-2xl z-[101] flex-col py-2 text-[15px] font-medium border border-white/10" oncontextmenu="return false;"></div>
+
+    <div id="sidebar-overlay" class="fixed inset-0 bg-black/20 z-40 hidden transition-opacity" onclick="toggleSidebar()"></div>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="bg-[#D1D1D6] h-full w-16 flex flex-col items-start py-6 z-50 transition-all duration-300 relative border-r border-[#C7C7CC] shrink-0 overflow-hidden">
+        <button onclick="toggleSidebar()" class="w-16 h-10 flex flex-col justify-center items-center gap-1 mb-8 hover:bg-black/5 rounded-lg transition-colors shrink-0">
+            <div class="w-5 h-0.5 bg-gray-800 rounded"></div>
+            <div class="w-5 h-0.5 bg-gray-800 rounded"></div>
+            <div class="w-5 h-0.5 bg-gray-800 rounded"></div>
+        </button>
+        <nav class="flex flex-col gap-6 w-full items-start px-3">
+            <button onclick="goToHome()" class="flex items-center text-gray-800 hover:text-black w-full px-1 py-1 overflow-hidden group">
+                <i class="ph-fill ph-house text-3xl shrink-0 transition-transform group-hover:scale-110"></i>
+                <span class="sidebar-text opacity-0 w-0 ml-0 group-hover:text-black font-medium whitespace-nowrap overflow-hidden transition-all duration-200">Todas las notas</span>
+            </button>
+            <button onclick="openSharedView()" class="flex items-center text-gray-800 w-full px-1 py-1 overflow-hidden group">
+                <i class="ph-fill ph-users text-3xl shrink-0 transition-transform group-hover:scale-110"></i>
+                <span class="sidebar-text opacity-0 w-0 ml-0 group-hover:text-black font-medium whitespace-nowrap overflow-hidden transition-all duration-200">Notas compartidas</span>
+            </button>
+            <button onclick="navTo('calendar')" class="flex items-center text-gray-800 hover:text-black w-full px-1 py-1 overflow-hidden group">
+                <i class="ph-fill ph-calendar-blank text-3xl shrink-0 transition-transform group-hover:scale-110"></i>
+                <span class="sidebar-text opacity-0 w-0 ml-0 group-hover:text-black font-medium whitespace-nowrap overflow-hidden transition-all duration-200">Calendario</span>
+            </button>
+            <div class="w-8 h-[1px] bg-gray-400 my-1 mx-2 shrink-0"></div>
+            <div id="sidebar-folders" class="flex flex-col gap-6 w-full items-start"></div>
+            <div class="w-8 h-[1px] bg-gray-400 my-1 mx-2 shrink-0"></div>
+            <button onclick="navTo('trash')" class="flex items-center text-gray-800 hover:text-black w-full px-1 py-1 overflow-hidden group">
+                <i class="ph-fill ph-trash text-3xl shrink-0 transition-transform group-hover:scale-110"></i>
+                <span class="sidebar-text opacity-0 w-0 ml-0 group-hover:text-black font-medium whitespace-nowrap overflow-hidden transition-all duration-200">Papelera</span>
+            </button>
+        </nav>
+        <div class="mt-auto w-full px-3">
+            <button onclick="openSettings()" class="flex items-center text-gray-800 w-full px-1 py-1 overflow-hidden group">
+                <i class="ph-fill ph-gear text-3xl shrink-0 transition-transform group-hover:scale-110"></i>
+                <span class="sidebar-text opacity-0 w-0 ml-0 group-hover:text-black font-medium whitespace-nowrap overflow-hidden transition-all duration-200">Ajustes</span>
+            </button>
+        </div>
+    </aside>
+
+    <main class="flex-1 h-full overflow-y-auto relative bg-[#E5E5EA]">
+
+        <div id="view-notes" class="h-full flex flex-col p-6 max-w-4xl mx-auto hidden">
+            <header class="mb-8 pb-2 relative h-10 flex items-center w-full">
+                <div id="default-header-content" class="w-full flex items-end justify-between transition-opacity duration-200">
+                    <div class="relative">
+                        <h1 id="main-view-title" class="text-2xl font-bold text-black tracking-tight">Todas las notas</h1>
+                        <div class="absolute -bottom-2 left-0 w-full h-[2px] bg-black"></div>
+                    </div>
+                    <div class="flex items-center gap-3 text-gray-700">
+                        <button onclick="toggleSearch()" class="hover:text-black"><i class="ph-bold ph-magnifying-glass text-2xl"></i></button>
+                        <button onclick="toggleGridView()" class="hover:text-black"><i id="grid-toggle-icon" class="ph-bold ph-squares-four text-2xl"></i></button>
+                        <div class="relative">
+                            <button onclick="toggleMoreMenu(event)" class="hover:text-black"><i class="ph-bold ph-dots-three-vertical text-2xl"></i></button>
+                            <div id="more-menu" class="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 hidden z-50 flex flex-col py-2">
+                                <button onclick="promptCreateFolder()" class="px-4 py-2 text-left text-gray-800 hover:bg-gray-50 flex items-center gap-2 font-medium">
+                                    <i class="ph-bold ph-folder-plus text-xl"></i> Crear carpeta
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="search-header-content" class="absolute inset-0 w-full flex items-center gap-3 hidden bg-[#E5E5EA]">
+                    <div class="flex-1 flex items-center bg-white rounded-full px-4 py-2 shadow-sm border border-gray-200 focus-within:ring-2 ring-gray-200 transition-shadow">
+                        <i class="ph-bold ph-magnifying-glass text-gray-400 text-lg mr-2"></i>
+                        <input type="text" id="search-input" oninput="handleSearchInput(event)" placeholder="Buscar nota por título..." class="flex-1 bg-transparent outline-none text-gray-800 font-medium text-sm">
+                    </div>
+                    <button onclick="toggleSearch()" class="text-gray-500 hover:text-[#CC1919] p-1 transition-colors"><i class="ph-bold ph-x text-2xl"></i></button>
+                </div>
+            </header>
+            <div id="notes-container" class="flex flex-col gap-4 pb-28 px-1"></div>
+        </div>
+
+        <div id="view-editor" class="h-full flex flex-col p-4 md:p-6 max-w-4xl mx-auto hidden">
+            <header class="flex items-center justify-between mb-4 gap-4">
+                <button onclick="navTo('notes')" class="text-gray-800 hover:bg-black/5 p-2 rounded-lg font-medium flex items-center gap-1">
+                    <i class="ph-bold ph-caret-left text-xl"></i>
+                </button>
+                <div class="flex-1 flex justify-center">
+                    <input type="text" id="editor-title" placeholder="Título" class="bg-white rounded-full px-6 py-2 w-full max-w-sm text-center font-medium shadow-sm outline-none border border-gray-100 focus:ring-2 ring-gray-200">
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="cycleBackground()" class="text-gray-600 hover:text-black p-2 bg-black/5 rounded-full"><i class="ph-bold ph-magic-wand text-xl"></i></button>
+                </div>
+            </header>
+            <div class="flex-1 flex flex-col bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden relative">
+                <div id="editor-content" contenteditable="true" placeholder="Empieza a escribir..." class="flex-1 w-full outline-none p-6 text-gray-800 leading-loose rounded-b-2xl transition-all duration-300 overflow-y-auto pb-32 bg-white"></div>
+            </div>
+        </div>
+
+        <div id="view-checklist" class="hidden h-full flex flex-col p-4 md:p-6 max-w-4xl mx-auto">
+            <header class="flex items-center justify-between mb-8 gap-4">
+                <button onclick="navTo('notes')" class="text-gray-800 hover:bg-black/5 p-2 rounded-lg font-medium flex items-center gap-1">
+                    <i class="ph-bold ph-caret-left text-xl"></i>
+                </button>
+                <div class="flex-1 flex justify-center">
+                    <input type="text" id="checklist-title" placeholder="Título" class="bg-white rounded-full px-6 py-2 w-full max-w-sm text-center font-medium shadow-sm outline-none border border-gray-100">
+                </div>
+                <div class="w-10"></div>
+            </header>
+            <div id="checklist-items" class="flex-1 overflow-y-auto px-2 flex flex-col gap-3 pb-32"></div>
+            <div class="fixed fab-cal-add left-0 w-full flex justify-center pointer-events-none z-10 pl-16">
+                <button onclick="addChecklistItem()" class="w-12 h-12 bg-[#CC1919] text-white rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition-transform pointer-events-auto">
+                    <i class="ph-bold ph-plus text-2xl"></i>
+                </button>
+            </div>
+        </div>
+
+        <div id="view-calendar" class="h-full flex flex-col p-6 max-w-lg mx-auto relative overflow-y-auto hidden">
+            <header class="flex items-end justify-between mb-8 pb-2">
+                <div class="relative">
+                    <h1 class="text-2xl font-bold text-black tracking-tight">Calendario</h1>
+                    <div class="absolute -bottom-2 left-0 w-full h-[2px] bg-black"></div>
+                </div>
+            </header>
+            <div class="w-full bg-[#B3B3B3] rounded-full py-2 flex justify-between items-center shadow-inner mb-6 px-4">
+                <button onclick="changeMonth(-1)" class="text-gray-700 hover:text-black p-1"><i class="ph-bold ph-caret-left"></i></button>
+                <span id="cal-month-year" class="font-medium text-gray-800 tracking-wide capitalize">--</span>
+                <button onclick="changeMonth(1)" class="text-gray-700 hover:text-black p-1"><i class="ph-bold ph-caret-right"></i></button>
+            </div>
+            <div id="calendar-swipe-zone" class="w-full pb-4 border-b border-[#D1D1D6] mb-6">
+                <div class="grid grid-cols-7 gap-y-6 text-center text-sm font-medium mb-4">
+                    <div class="text-gray-800">L</div><div class="text-gray-800">M</div><div class="text-gray-800">X</div>
+                    <div class="text-gray-800">J</div><div class="text-gray-800">V</div><div class="text-gray-800">S</div><div class="text-gray-800">D</div>
+                </div>
+                <div id="cal-grid" class="grid grid-cols-7 gap-y-4 text-center text-sm font-medium"></div>
+            </div>
+            <div id="cal-reminders" class="flex flex-col gap-3 pb-32"></div>
+        </div>
+
+        <div id="view-trash" class="h-full flex flex-col p-6 max-w-4xl mx-auto hidden">
+            <header class="flex items-end justify-between mb-8 pb-2">
+                <div class="relative">
+                    <h1 class="text-2xl font-bold text-[#DD6B6B] tracking-tight">Papelera</h1>
+                    <div class="absolute -bottom-2 left-0 w-full h-[2px] bg-[#DD6B6B]"></div>
+                </div>
+            </header>
+            <p class="text-sm text-gray-500 mb-6 font-medium">Las notas se eliminarán permanentemente después de 7 días.</p>
+            <div id="trash-container" class="flex flex-col gap-4 pb-28 px-1"></div>
+        </div>
+    </main>
+
+    <div id="fab-container" class="fixed right-6 z-40 w-16 h-16 pointer-events-auto">
+        <div id="fan-menu" class="absolute bottom-2 right-2 w-64 h-64 origin-bottom-right transition-all duration-300 scale-0 opacity-0 pointer-events-none hidden">
+            <svg viewBox="0 0 256 256" class="absolute inset-0 w-full h-full pointer-events-none">
+                <path d="M 32 224 A 192 192 0 0 1 224 32" stroke="var(--fan-coral)" stroke-width="48" stroke-linecap="round" fill="none" class="pointer-events-auto"></path>
+            </svg>
+            <button onclick="createNewNote('text')" class="absolute text-[#1C1C1E] hover:scale-110 transition-transform pointer-events-auto z-10 translate-x-1/2 translate-y-1/2" style="bottom: 32px; right: 224px;" title="Nota"><i class="ph-fill ph-text-align-left text-[32px]"></i></button>
+            <button onclick="openTableModal()" class="absolute text-[#1C1C1E] hover:scale-110 transition-transform pointer-events-auto z-10 translate-x-1/2 translate-y-1/2" style="bottom: 128px; right: 198.27px;" title="Tabla"><i class="ph-fill ph-table text-[32px]"></i></button>
+            <button onclick="createNewNote('checklist')" class="absolute text-[#1C1C1E] hover:scale-110 transition-transform pointer-events-auto z-10 translate-x-1/2 translate-y-1/2" style="bottom: 198.27px; right: 128px;" title="Checklist"><i class="ph-fill ph-check-square-offset text-[32px]"></i></button>
+            <button onclick="navTo('calendar')" class="absolute text-[#1C1C1E] hover:scale-110 transition-transform pointer-events-auto z-10 translate-x-1/2 translate-y-1/2" style="bottom: 224px; right: 32px;" title="Recordatorio"><i class="ph-fill ph-bell text-[32px]"></i></button>
+        </div>
+        <button id="main-fab" onclick="handleFabClick(event)" class="absolute bottom-0 right-0 w-16 h-16 bg-[#CC1919] text-white rounded-full shadow-xl shadow-red-900/30 flex items-center justify-center hover:scale-105 transition-transform z-20 pointer-events-auto hidden">
+            <i id="main-fab-icon" class="ph-bold ph-pencil-simple text-3xl text-white"></i>
+        </button>
+        <button id="cal-add-fab" onclick="addReminder()" class="absolute bottom-0 right-0 w-16 h-16 bg-[#CC1919] text-white rounded-full shadow-xl shadow-red-900/30 flex items-center justify-center hover:scale-105 transition-transform z-20 pointer-events-auto hidden">
+            <i class="ph-bold ph-plus text-3xl text-white"></i>
+        </button>
+    </div>
+
+    <!-- Modal Tabla -->
+    <div id="table-modal" class="fixed inset-0 bg-black/30 z-50 items-center justify-center p-4 backdrop-blur-sm hidden">
+        <div class="bg-[#E2E2E6] p-6 rounded-2xl shadow-2xl w-full max-w-xs relative border border-gray-300">
+            <div class="relative mb-6">
+                <h2 class="text-lg font-semibold text-gray-800">Tabla</h2>
+                <div class="absolute -bottom-1 left-0 w-3/4 h-[1px] bg-gray-500"></div>
+            </div>
+            <div class="flex items-center justify-between mb-4">
+                <span class="text-gray-700">Filas</span>
+                <div class="flex items-center gap-3">
+                    <button onclick="adjTable('row', -1)" class="text-gray-800"><i class="ph-fill ph-caret-left text-xl"></i></button>
+                    <div class="bg-white w-10 text-center py-0.5 rounded-full text-sm font-medium" id="val-rows">2</div>
+                    <button onclick="adjTable('row', 1)" class="text-gray-800"><i class="ph-fill ph-caret-right text-xl"></i></button>
+                </div>
+            </div>
+            <div class="flex items-center justify-between mb-8">
+                <span class="text-gray-700">Columnas</span>
+                <div class="flex items-center gap-3">
+                    <button onclick="adjTable('col', -1)" class="text-gray-800"><i class="ph-fill ph-caret-left text-xl"></i></button>
+                    <div class="bg-white w-10 text-center py-0.5 rounded-full text-sm font-medium" id="val-cols">2</div>
+                    <button onclick="adjTable('col', 1)" class="text-gray-800"><i class="ph-fill ph-caret-right text-xl"></i></button>
+                </div>
+            </div>
+            <div class="flex justify-end mt-2">
+                <button onclick="closeTableModal()" class="mr-4 text-gray-500 font-medium">Cancelar</button>
+                <button onclick="insertTable()" class="bg-[#CC1919] text-white px-5 py-1.5 rounded-full font-medium">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Carpeta -->
+    <div id="folder-modal" class="fixed inset-0 bg-black/40 z-50 items-center justify-center p-4 backdrop-blur-sm hidden" onclick="if(event.target===this) closeFolderModal()">
+        <div class="bg-[#5D5D5D] p-6 rounded-3xl shadow-2xl w-full max-w-[300px] relative border border-gray-500">
+            <input type="text" id="folder-name-input" placeholder="Nombre" class="w-full bg-transparent border-b border-white text-white placeholder-gray-300 outline-none text-lg mb-6 pb-2">
+            <div class="flex items-center gap-4">
+                <div class="bg-white rounded-full px-3 py-2 flex items-center gap-2 flex-1 justify-between shadow-inner">
+                    <button onclick="selectFolderColor('#CC1919')" data-color="#CC1919" class="folder-color-btn w-5 h-5 rounded-full bg-[#CC1919] ring-2 ring-offset-1 ring-transparent transition-all"></button>
+                    <button onclick="selectFolderColor('#F59E0B')" data-color="#F59E0B" class="folder-color-btn w-5 h-5 rounded-full bg-[#F59E0B] ring-2 ring-offset-1 ring-transparent transition-all"></button>
+                    <button onclick="selectFolderColor('#22C55E')" data-color="#22C55E" class="folder-color-btn w-5 h-5 rounded-full bg-[#22C55E] ring-2 ring-offset-1 ring-transparent transition-all"></button>
+                    <button onclick="selectFolderColor('#3B82F6')" data-color="#3B82F6" class="folder-color-btn w-5 h-5 rounded-full bg-[#3B82F6] ring-2 ring-offset-1 ring-transparent transition-all"></button>
+                    <button onclick="selectFolderColor('#1C1C1E')" data-color="#1C1C1E" class="folder-color-btn w-5 h-5 rounded-full bg-[#1C1C1E] ring-2 ring-offset-1 ring-transparent transition-all"></button>
+                </div>
+                <button onclick="confirmCreateFolder()" class="bg-[#CC1919] text-white px-5 py-2 rounded-xl font-bold shadow-md hover:bg-red-700 transition-colors">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Compartir -->
+    <div id="send-modal" class="fixed inset-0 bg-black/40 z-50 items-center justify-center p-4 backdrop-blur-sm hidden" onclick="if(event.target===this) closeSendModal()">
+        <div class="bg-[#5D5D5D] p-6 rounded-3xl shadow-2xl w-full max-w-[300px] relative border border-gray-500 text-white flex flex-col gap-4">
+            <h3 class="text-lg font-bold mb-1 text-center">Compartir nota como...</h3>
+            <p class="text-[13px] text-gray-300 text-center mb-2 leading-tight">Se abrirá el menú nativo del sistema (WhatsApp, Telegram, Gmail, AirDrop, etc.).</p>
+            <button onclick="shareAsPDF()" class="bg-white/10 hover:bg-white/20 px-4 py-3 rounded-xl font-medium transition-colors flex items-center justify-center gap-3 border border-white/10">
+                <i class="ph-fill ph-file-pdf text-2xl text-[#DD6B6B]"></i> Documento PDF
+            </button>
+            <button onclick="shareAsText()" class="bg-white/10 hover:bg-white/20 px-4 py-3 rounded-xl font-medium transition-colors flex items-center justify-center gap-3 border border-white/10">
+                <i class="ph-fill ph-file-text text-2xl text-[#3B82F6]"></i> Texto plano
+            </button>
+            <button onclick="closeSendModal()" class="mt-2 text-sm text-gray-400 hover:text-white transition-colors">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- Modal PIN -->
+    <div id="pin-modal" class="fixed inset-0 bg-black/60 z-[200] hidden items-center justify-center p-4 backdrop-blur-md" onclick="if(event.target===this) closePinModal()">
+        <div class="bg-[#5D5D5D] p-8 rounded-3xl shadow-2xl w-full max-w-[300px] relative border border-gray-500 text-white flex flex-col items-center">
+            <div class="w-16 h-16 rounded-full bg-[#CC1919]/20 flex items-center justify-center mb-4">
+                <i class="ph-fill ph-lock-key text-3xl text-[#CC1919]"></i>
+            </div>
+            <h3 class="text-xl font-bold mb-2 text-center">Nota Privada</h3>
+            <p class="text-[13px] text-gray-300 text-center mb-6 leading-tight">Introduce tu PIN de respaldo.</p>
+            <input type="password" id="pin-input" class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-center text-2xl tracking-[0.5em] outline-none mb-6 focus:border-[#CC1919] transition-colors" maxlength="8" placeholder="••••">
+            <div class="flex w-full gap-3">
+                <button onclick="closePinModal()" class="flex-1 bg-white/10 hover:bg-white/20 py-2.5 rounded-xl font-medium transition-colors text-sm">Cancelar</button>
+                <button onclick="verifyPinFallback()" class="flex-1 bg-[#CC1919] hover:bg-red-700 py-2.5 rounded-xl font-medium transition-colors text-sm shadow-md">Abrir</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Ajustes -->
+    <div id="settings-modal" class="fixed inset-0 bg-black/40 z-50 items-center justify-center p-4 backdrop-blur-sm hidden" onclick="if(event.target===this) closeSettings()">
+        <div class="bg-[#5D5D5D] p-6 rounded-3xl shadow-2xl w-full max-w-[340px] text-white flex flex-col gap-3">
+            <h3 class="text-lg font-bold mb-1 text-center">Ajustes</h3>
+            <button onclick="exportBackup()" class="bg-white/10 hover:bg-white/20 px-4 py-3 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 border border-white/10">
+                <i class="ph-fill ph-download-simple text-xl"></i> Exportar copia de seguridad
+            </button>
+            <label class="bg-white/10 hover:bg-white/20 px-4 py-3 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 border border-white/10 cursor-pointer">
+                <i class="ph-fill ph-upload-simple text-xl"></i> Importar copia
+                <input type="file" accept=".json,application/json" class="hidden" onchange="importBackup(this.files[0])">
+            </label>
+            <p class="text-[11px] text-gray-400 text-center mt-2 leading-relaxed px-2">
+                Tus notas viven solo en este dispositivo. Exporta una copia periódicamente.
+            </p>
+            <p id="persistence-status" class="text-[11px] text-gray-400 text-center leading-relaxed px-2">Comprobando almacenamiento...</p>
+            <button onclick="closeSettings()" class="mt-2 text-sm text-gray-400 hover:text-white transition-colors">Cerrar</button>
+        </div>
+    </div>
+
+    <script>
+        let notes = [];
+        let folders = [];
+        let currentView = 'notes';
+        let isSidebarOpen = false;
+        let isFanMenuOpen = false;
+        let isGridView = false;
+        let isMoreMenuOpen = false;
+        let selectedFolderColor = '#CC1919';
+        let blockNoteClick = false;
+
+        let activeFolderId = null;
+        let isSharedView = false;
+        let currentSearchTerm = '';
+
+        let currentNote = { id: null, type: 'text', title: '', content: '', items: [], background: 'none', isTrashed: false, trashedAt: null, folderId: null, isPrivate: false, isShared: false, time: '', notified: false };
+        let activeContextMenuNoteId = null;
+
+        const TODAY = new Date();
+        let calDate = new Date(TODAY.getFullYear(), TODAY.getMonth(), 1);
+        let selectedDate = new Date(TODAY.getTime());
+
+        function initApp() {
+            const localData = localStorage.getItem('figma_notes_v3');
+            if (localData) notes = JSON.parse(localData);
+            const localFolders = localStorage.getItem('figma_folders_v2');
+            if (localFolders) folders = JSON.parse(localFolders);
+
+            let needsSave = false;
+            notes.forEach((n, idx) => {
+                if (!n.id) { n.id = Date.now().toString() + '-' + idx; needsSave = true; }
+                if (n.isShared === undefined) { n.isShared = false; needsSave = true; }
+                if (n.type === 'reminder' && n.time === undefined) { n.time = ''; n.notified = false; needsSave = true; }
+            });
+            if (needsSave) saveLocal();
+
+            cleanupTrash();
+            renderNotesList();
+            renderSidebarFolders();
+            initCalendarSwipe();
+            startNotificationChecker();
+            goToHome();
+
+            // Solicitar almacenamiento persistente (evita borrado automático)
+            requestStoragePersistence();
+        }
+
+        // ✅ Solicita persistencia; el navegador deja de borrar los datos por falta de espacio
+        async function requestStoragePersistence() {
+            try {
+                if (!navigator.storage || !navigator.storage.persist) return;
+                const already = await navigator.storage.persisted();
+                if (already) return;
+                const granted = await navigator.storage.persist();
+                console.log('Persistencia de almacenamiento:', granted ? 'concedida' : 'denegada');
+            } catch (err) {
+                console.log('Persistencia no disponible:', err);
+            }
+        }
+
+        async function updatePersistenceStatus() {
+            const el = document.getElementById('persistence-status');
+            if (!el) return;
+            if (!navigator.storage || !navigator.storage.persisted) {
+                el.textContent = '⚠️ Este navegador no protege el almacenamiento';
+                el.className = 'text-[11px] text-yellow-400 text-center leading-relaxed px-2';
+                return;
+            }
+            try {
+                const persisted = await navigator.storage.persisted();
+                if (persisted) {
+                    el.textContent = '✅ Almacenamiento protegido (no se borrará automáticamente)';
+                    el.className = 'text-[11px] text-green-400 text-center leading-relaxed px-2';
+                } else {
+                    el.textContent = '⚠️ Almacenamiento sin protección. Instala la app y úsala más para conseguirlo.';
+                    el.className = 'text-[11px] text-yellow-400 text-center leading-relaxed px-2';
+                }
+            } catch (err) {
+                el.textContent = '⚠️ No se pudo comprobar el estado del almacenamiento';
+                el.className = 'text-[11px] text-yellow-400 text-center leading-relaxed px-2';
+            }
+        }
+
+        function saveLocal() { localStorage.setItem('figma_notes_v3', JSON.stringify(notes)); }
+        function saveFoldersLocal() { localStorage.setItem('figma_folders_v2', JSON.stringify(folders)); }
+
+        function cleanupTrash() {
+            const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+            const now = Date.now();
+            let changed = false;
+            notes = notes.filter(n => {
+                if (n.isTrashed && (now - n.trashedAt > sevenDaysMs)) { changed = true; return false; }
+                return true;
+            });
+            if (changed) saveLocal();
+        }
+
+        function toggleSearch() {
+            const def = document.getElementById('default-header-content');
+            const search = document.getElementById('search-header-content');
+            if (def.classList.contains('hidden')) {
+                def.classList.remove('hidden');
+                search.classList.add('hidden');
+                currentSearchTerm = '';
+                document.getElementById('search-input').value = '';
+                renderNotesList();
+            } else {
+                def.classList.add('hidden');
+                search.classList.remove('hidden');
+                document.getElementById('search-input').focus();
+            }
+        }
+        function handleSearchInput(e) { currentSearchTerm = e.target.value.toLowerCase(); renderNotesList(); }
+        function resetSearchState() {
+            currentSearchTerm = '';
+            const s = document.getElementById('search-input');
+            if (s) s.value = '';
+            document.getElementById('default-header-content').classList.remove('hidden');
+            document.getElementById('search-header-content').classList.add('hidden');
+        }
+
+        function startNotificationChecker() {
+            setInterval(() => {
+                if (!("Notification" in window) || Notification.permission !== "granted") return;
+                const now = new Date();
+                const currentDate = getFormatDateStr(now);
+                const currentTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+                let needsSave = false;
+                notes.forEach(n => {
+                    if (n.type === 'reminder' && n.date === currentDate && n.time === currentTime && !n.isTrashed && !n.notified) {
+                        new Notification("Mis Notas", { body: n.content || "Recordatorio pendiente." });
+                        n.notified = true;
+                        needsSave = true;
+                    }
+                });
+                if (needsSave) saveLocal();
+            }, 30000);
+        }
+
+        function bufferToBase64url(buffer) {
+            return btoa(String.fromCharCode(...new Uint8Array(buffer))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+        }
+        function base64urlToBuffer(base64url) {
+            const padding = "==".slice(0, (4 - base64url.length % 4) % 4);
+            const base64 = (base64url + padding).replace(/-/g, "+").replace(/_/g, "/");
+            const str = atob(base64);
+            const buffer = new ArrayBuffer(str.length);
+            const byteView = new Uint8Array(buffer);
+            for (let i = 0; i < str.length; i++) byteView[i] = str.charCodeAt(i);
+            return buffer;
+        }
+
+        function toggleSidebar() {
+            isSidebarOpen = !isSidebarOpen;
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            const texts = document.querySelectorAll('.sidebar-text');
+            if (isSidebarOpen) {
+                sidebar.classList.remove('w-16');
+                sidebar.classList.add('w-64', 'shadow-2xl');
+                overlay.classList.remove('hidden');
+                setTimeout(() => texts.forEach(t => {
+                    t.classList.remove('w-0', 'ml-0');
+                    t.classList.add('w-auto', 'ml-4', 'opacity-100');
+                }), 150);
+            } else {
+                sidebar.classList.remove('w-64', 'shadow-2xl');
+                sidebar.classList.add('w-16');
+                overlay.classList.add('hidden');
+                texts.forEach(t => {
+                    t.classList.remove('w-auto', 'ml-4', 'opacity-100');
+                    t.classList.add('opacity-0');
+                    setTimeout(() => t.classList.add('w-0', 'ml-0'), 200);
+                });
+            }
+        }
+
+        function toggleGridView() {
+            isGridView = !isGridView;
+            document.getElementById('grid-toggle-icon').className = isGridView ? 'ph-bold ph-list text-2xl' : 'ph-bold ph-squares-four text-2xl';
+            renderNotesList();
+        }
+
+        function toggleMoreMenu(e) {
+            if (e) e.stopPropagation();
+            isMoreMenuOpen = !isMoreMenuOpen;
+            document.getElementById('more-menu').classList.toggle('hidden', !isMoreMenuOpen);
+        }
+
+        window.showContextMenu = function(id, x, y) {
+            blockNoteClick = true;
+            activeContextMenuNoteId = id;
+            const note = notes.find(n => n.id === id);
+            if (note) {
+                document.getElementById('btn-privacy').innerText = note.isPrivate ? "Quitar privacidad" : "Hacer privada";
+                document.getElementById('btn-share-mark').innerText = note.isShared ? "Quitar de compartidas" : "Marcar como compartida";
+            }
+            const menu = document.getElementById('note-context-menu');
+            menu.classList.remove('hidden');
+            menu.classList.add('flex');
+            let posX = x, posY = y;
+            if (posX + 210 > window.innerWidth) posX = window.innerWidth - 210;
+            if (posY + 300 > window.innerHeight) posY = window.innerHeight - 300;
+            menu.style.left = `${posX}px`;
+            menu.style.top = `${posY}px`;
+            document.getElementById('folder-submenu').classList.add('hidden');
+            document.getElementById('folder-submenu').classList.remove('flex');
+            setTimeout(() => blockNoteClick = false, 300);
+        };
+
+        window.showFolderSubmenu = function(e) {
+            e.stopPropagation();
+            const submenu = document.getElementById('folder-submenu');
+            submenu.innerHTML = '';
+            if (folders.length === 0) {
+                submenu.innerHTML = '<div class="px-5 py-2.5 text-gray-400 italic">No hay carpetas</div>';
+            } else {
+                folders.forEach(f => {
+                    submenu.innerHTML += `<button onclick="moveNoteToFolder('${f.id}')" class="px-5 py-2.5 text-left hover:bg-white/10 transition-colors w-full tracking-wide flex items-center gap-2"><i class="ph-fill ph-folder text-lg" style="color:${f.color}"></i> ${f.name}</button>`;
+                });
+            }
+            submenu.classList.remove('hidden');
+            submenu.classList.add('flex');
+            const rect = document.getElementById('note-context-menu').getBoundingClientRect();
+            let posX = rect.right + 5, posY = rect.top;
+            if (posX + 200 > window.innerWidth) posX = rect.left - 200 - 5;
+            if (posY + 250 > window.innerHeight) posY = window.innerHeight - 250;
+            submenu.style.left = `${posX}px`;
+            submenu.style.top = `${posY}px`;
+        };
+
+        // ✅ Toggle manual de "compartida"
+        window.toggleShareMark = function() {
+            const note = notes.find(n => n.id === activeContextMenuNoteId);
+            if (note) {
+                note.isShared = !note.isShared;
+                saveLocal();
+                if (currentView === 'notes') renderNotesList();
+            }
+            hideContextMenu();
+        };
+
+        // ✅ Marca como compartida automáticamente cuando el share nativo tiene éxito
+        function markNoteAsShared(note) {
+            if (!note || note.isShared) return;
+            note.isShared = true;
+            saveLocal();
+            if (currentView === 'notes') renderNotesList();
+        }
+
+        window.togglePrivacy = async function() {
+            const note = notes.find(n => n.id === activeContextMenuNoteId);
+            if (!note) return;
+            if (!note.isPrivate) {
+                let hasSetup = localStorage.getItem('master_pin');
+                if (!hasSetup) {
+                    const pin = prompt("Crea un PIN de respaldo (mín. 4 dígitos). Lo necesitarás si falla la huella.");
+                    if (!pin || pin.length < 4) { alert("PIN inválido. Operación cancelada."); return; }
+                    localStorage.setItem('master_pin', pin);
+                    if (window.PublicKeyCredential) {
+                        try {
+                            const challenge = window.crypto.getRandomValues(new Uint8Array(32));
+                            const userId = window.crypto.getRandomValues(new Uint8Array(16));
+                            const cred = await navigator.credentials.create({
+                                publicKey: {
+                                    challenge,
+                                    rp: { name: "Mis Notas App" },
+                                    user: { id: userId, name: "usuario", displayName: "Usuario" },
+                                    pubKeyCredParams: [{ alg: -7, type: "public-key" }, { alg: -257, type: "public-key" }],
+                                    authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
+                                    timeout: 60000,
+                                }
+                            });
+                            localStorage.setItem('webauthn_cred', bufferToBase64url(cred.rawId));
+                        } catch (err) { console.log("WebAuthn omitido:", err); }
+                    }
+                }
+                note.isPrivate = true;
+            } else {
+                note.isPrivate = false;
+            }
+            saveLocal();
+            renderNotesList();
+            hideContextMenu();
+        };
+
+        window.closePinModal = function() {
+            document.getElementById('pin-modal').classList.add('hidden');
+            document.getElementById('pin-modal').classList.remove('flex');
+            window.noteToUnlock = null;
+        };
+        window.verifyPinFallback = function() {
+            const input = document.getElementById('pin-input').value;
+            const master = localStorage.getItem('master_pin');
+            if (input === master && window.noteToUnlock) {
+                closePinModal();
+                openNote(window.noteToUnlock);
+            } else {
+                alert("PIN incorrecto.");
+                document.getElementById('pin-input').value = '';
+                document.getElementById('pin-input').focus();
+            }
+        };
+
+        function buildNoteTempDiv(note) {
+            const div = document.createElement('div');
+            div.style.padding = '30px';
+            div.style.fontFamily = 'sans-serif';
+            div.style.color = '#000';
+            if (note.type === 'checklist') {
+                let html = `<h1 style="font-size:24px;margin-bottom:20px;">${note.title || 'Nota'}</h1><ul style="list-style:none;padding:0;font-size:16px;">`;
+                note.items.forEach(i => { html += `<li style="margin-bottom:10px;">${i.checked ? '☑' : '☐'} ${i.text}</li>`; });
+                html += '</ul>';
+                div.innerHTML = html;
+            } else {
+                div.innerHTML = `<h1 style="font-size:24px;margin-bottom:20px;">${note.title || 'Nota'}</h1><div style="font-size:16px;">${note.content}</div>`;
+            }
+            return div;
+        }
+        function pdfOptions(note) {
+            return {
+                margin: 1,
+                filename: `${note.title || 'nota'}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+        }
+        function downloadBlob(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(url), 1500);
+        }
+
+        window.downloadPDF = function() {
+            const note = notes.find(n => n.id === activeContextMenuNoteId);
+            if (!note) return;
+            const tempDiv = buildNoteTempDiv(note);
+            html2pdf().set(pdfOptions(note)).from(tempDiv).save();
+            hideContextMenu();
+        };
+
+        window.openSendModal = function() {
+            hideContextMenu();
+            document.getElementById('send-modal').classList.remove('hidden');
+            document.getElementById('send-modal').classList.add('flex');
+        };
+        window.closeSendModal = function() {
+            document.getElementById('send-modal').classList.add('hidden');
+            document.getElementById('send-modal').classList.remove('flex');
+        };
+
+        window.shareAsText = function() {
+            const note = notes.find(n => n.id === activeContextMenuNoteId);
+            if (!note) return;
+            let textContent = '';
+            if (note.type === 'checklist') {
+                textContent = `${note.title || 'Lista'}\n\n`;
+                note.items.forEach(i => { textContent += `${i.checked ? '[x]' : '[ ]'} ${i.text}\n`; });
+            } else {
+                textContent = `${note.title || 'Nota'}\n\n${(note.content || '').replace(/<[^>]*>?/gm, '\n').replace(/\n\n+/g, '\n')}`;
+            }
+            if (navigator.share) {
+                navigator.share({ title: note.title || 'Nota', text: textContent })
+                    .then(() => markNoteAsShared(note))
+                    .catch(err => { if (err.name !== 'AbortError') console.error(err); });
+            } else {
+                navigator.clipboard.writeText(textContent)
+                    .then(() => { markNoteAsShared(note); alert('Texto copiado al portapapeles.'); })
+                    .catch(() => alert('No se pudo copiar.'));
+            }
+            closeSendModal();
+        };
+
+        window.shareAsPDF = function() {
+            const note = notes.find(n => n.id === activeContextMenuNoteId);
+            if (!note) return;
+            const tempDiv = buildNoteTempDiv(note);
+            const opt = pdfOptions(note);
+            closeSendModal();
+            html2pdf().set(opt).from(tempDiv).outputPdf('blob').then(pdfBlob => {
+                const filename = `${note.title || 'nota'}.pdf`;
+                const file = new File([pdfBlob], filename, { type: 'application/pdf' });
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    navigator.share({ files: [file], title: note.title || 'Nota' })
+                        .then(() => markNoteAsShared(note))
+                        .catch(err => {
+                            if (err.name !== 'AbortError') downloadBlob(pdfBlob, filename);
+                        });
+                } else {
+                    downloadBlob(pdfBlob, filename);
+                    markNoteAsShared(note);
+                }
+            }).catch(() => { html2pdf().set(opt).from(tempDiv).save(); });
+        };
+
+        window.moveNoteToFolder = function(folderId) {
+            const note = notes.find(n => n.id === activeContextMenuNoteId);
+            if (note) { note.folderId = folderId; saveLocal(); renderNotesList(); }
+            hideContextMenu();
+        };
+
+        function hideContextMenu() {
+            const ctx = document.getElementById('note-context-menu');
+            if (ctx && !ctx.classList.contains('hidden')) { ctx.classList.add('hidden'); ctx.classList.remove('flex'); }
+            const f = document.getElementById('folder-submenu');
+            if (f && !f.classList.contains('hidden')) { f.classList.add('hidden'); f.classList.remove('flex'); }
+        }
+
+        window.moveToTrash = function() {
+            const note = notes.find(n => n.id === activeContextMenuNoteId);
+            if (note) { note.isTrashed = true; note.trashedAt = Date.now(); saveLocal(); if (currentView === 'notes') renderNotesList(); }
+            hideContextMenu();
+        };
+
+        document.addEventListener('click', (e) => {
+            if (isFanMenuOpen && !e.target.closest('#fab-container')) closeFanMenu();
+            if (isMoreMenuOpen && !e.target.closest('#more-menu')) toggleMoreMenu();
+            if (!e.target.closest('#note-context-menu') && !e.target.closest('#folder-submenu') && !e.target.closest('#send-modal') && !e.target.closest('#pin-modal')) hideContextMenu();
+        });
+
+        function promptCreateFolder() {
+            toggleMoreMenu();
+            document.getElementById('folder-name-input').value = '';
+            selectFolderColor('#CC1919');
+            document.getElementById('folder-modal').classList.remove('hidden');
+            document.getElementById('folder-modal').classList.add('flex');
+        }
+        function closeFolderModal() {
+            document.getElementById('folder-modal').classList.add('hidden');
+            document.getElementById('folder-modal').classList.remove('flex');
+        }
+        function selectFolderColor(color) {
+            selectedFolderColor = color;
+            document.querySelectorAll('.folder-color-btn').forEach(btn => {
+                if (btn.dataset.color === color) {
+                    btn.classList.replace('ring-transparent', 'ring-gray-400');
+                    btn.classList.add('scale-125');
+                } else {
+                    btn.classList.replace('ring-gray-400', 'ring-transparent');
+                    btn.classList.remove('scale-125');
+                }
+            });
+        }
+        function confirmCreateFolder() {
+            const name = document.getElementById('folder-name-input').value.trim();
+            if (name) {
+                folders.push({ id: Date.now().toString(), name, color: selectedFolderColor });
+                saveFoldersLocal();
+                renderSidebarFolders();
+                closeFolderModal();
+            }
+        }
+        function renderSidebarFolders() {
+            const container = document.getElementById('sidebar-folders');
+            if (!container) return;
+            container.innerHTML = '';
+            folders.forEach(folder => {
+                const textClasses = isSidebarOpen ? 'w-auto ml-4 opacity-100' : 'opacity-0 w-0 ml-0';
+                container.innerHTML += `
+                <button onclick="openFolderView('${folder.id}')" class="flex items-center text-gray-800 w-full px-1 py-1 overflow-hidden group">
+                    <i class="ph-fill ph-folder text-3xl shrink-0 transition-transform group-hover:scale-110" style="color: ${folder.color};"></i>
+                    <span class="sidebar-text ${textClasses} font-medium whitespace-nowrap overflow-hidden transition-all duration-200 group-hover:text-black">${folder.name}</span>
+                </button>`;
+            });
+        }
+
+        window.openFolderView = function(folderId) {
+            activeFolderId = folderId;
+            isSharedView = false;
+            resetSearchState();
+            const folder = folders.find(f => f.id === folderId);
+            document.getElementById('main-view-title').innerText = folder ? folder.name : 'Carpeta';
+            navTo('notes');
+        };
+        window.openSharedView = function() {
+            activeFolderId = null;
+            isSharedView = true;
+            resetSearchState();
+            document.getElementById('main-view-title').innerText = 'Notas compartidas';
+            navTo('notes');
+        };
+        window.goToHome = function() {
+            activeFolderId = null;
+            isSharedView = false;
+            resetSearchState();
+            document.getElementById('main-view-title').innerText = 'Todas las notas';
+            navTo('notes');
+        };
+
+        function navTo(view) {
+            if (currentNote.id && (currentView === 'editor' || currentView === 'checklist')) saveCurrentNote();
+            ['notes', 'editor', 'checklist', 'calendar', 'trash'].forEach(v => document.getElementById(`view-${v}`).classList.add('hidden'));
+            document.getElementById(`view-${view}`).classList.remove('hidden');
+            currentView = view;
+            if (isSidebarOpen) toggleSidebar();
+            closeFanMenu();
+            updateFABState();
+            if (view === 'notes') renderNotesList();
+            if (view === 'trash') renderTrashList();
+            if (view === 'calendar') { renderCalendarGrid(); renderReminders(); }
+        }
+
+        function renderNotesList() {
+            const container = document.getElementById('notes-container');
+            container.innerHTML = '';
+            container.className = isGridView ? 'grid grid-cols-2 gap-4 pb-28 px-1' : 'flex flex-col gap-4 pb-28 px-1';
+
+            const visibleNotes = notes.filter(n => {
+                if (n.type === 'reminder' || n.isTrashed) return false;
+                if (isSharedView) { if (!n.isShared) return false; }
+                else if (activeFolderId) { if (n.folderId !== activeFolderId) return false; }
+                else { if (n.folderId) return false; }
+                if (currentSearchTerm && !(n.title || '').toLowerCase().includes(currentSearchTerm)) return false;
+                return true;
+            }).sort((a, b) => b.updatedAt - a.updatedAt);
+
+            if (visibleNotes.length === 0) {
+                if (currentSearchTerm) container.innerHTML = '<p class="text-gray-500 italic text-center w-full mt-10">No se encontraron notas con ese título.</p>';
+                else if (isSharedView) container.innerHTML = '<p class="text-gray-500 italic text-center w-full mt-10">Aún no has compartido ninguna nota.<br><span class="text-xs">Mantén pulsada una nota → Compartir.</span></p>';
+                else if (activeFolderId) container.innerHTML = '<p class="text-gray-500 italic text-center w-full mt-10">No hay notas en esta carpeta.</p>';
+            }
+
+            visibleNotes.forEach(note => {
+                const card = document.createElement('div');
+                card.className = `bg-white rounded-[20px] p-5 shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-shadow relative ${isGridView ? 'min-h-[160px]' : 'min-h-[120px]'} flex flex-col select-none`;
+
+                let snippet = '';
+                if (note.isPrivate) {
+                    snippet = `<div class="text-[13px] text-gray-400 mt-2 italic flex items-center gap-1"><i class="ph-fill ph-lock-key"></i> Nota protegida</div>`;
+                } else if (note.type === 'checklist') {
+                    const done = note.items.filter(i => i.checked).length;
+                    snippet = `<div class="text-sm text-gray-500 mt-2 flex items-center gap-1"><i class="ph-bold ph-check-square"></i> ${done}/${note.items.length} completados</div>`;
+                } else {
+                    const cleanText = (note.content || '').replace(/<[^>]*>?/gm, ' ');
+                    snippet = `<div class="text-[13px] text-gray-700 mt-2 line-clamp-4 leading-relaxed">${cleanText || '...'}</div>`;
+                }
+
+                const d = new Date(note.updatedAt);
+                const dateStr = d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+                const lockIcon = note.isPrivate ? `<div class="absolute top-4 right-4 bg-gray-50 w-7 h-7 flex items-center justify-center rounded-full shadow-sm border border-gray-100"><i class="ph-fill ph-lock-key text-[#CC1919] text-sm"></i></div>` : '';
+                const sharedIconRight = note.isPrivate ? 'right-12' : 'right-4';
+                const sharedIcon = note.isShared ? `<div class="absolute top-4 ${sharedIconRight} bg-[#3B82F6]/10 w-7 h-7 flex items-center justify-center rounded-full shadow-sm border border-[#3B82F6]/20"><i class="ph-fill ph-users text-[#3B82F6] text-sm"></i></div>` : '';
+
+                card.innerHTML = `
+                    ${lockIcon}${sharedIcon}
+                    <div class="text-xs text-gray-400 mb-1 font-medium pr-14">${dateStr}</div>
+                    ${note.title ? `<strong class="block text-base text-gray-900 truncate tracking-tight pr-14">${note.title}</strong>` : ''}
+                    ${snippet}
+                `;
+
+                let pressTimer;
+                card.oncontextmenu = (e) => { e.preventDefault(); showContextMenu(note.id, e.clientX, e.clientY); };
+                card.onmousedown = (e) => {
+                    if (e.button !== 0) return;
+                    pressTimer = setTimeout(() => showContextMenu(note.id, e.clientX, e.clientY), 500);
+                };
+                card.onmousemove = () => clearTimeout(pressTimer);
+                card.onmouseup = () => clearTimeout(pressTimer);
+                card.ontouchstart = (e) => {
+                    pressTimer = setTimeout(() => {
+                        showContextMenu(note.id, e.touches[0].clientX, e.touches[0].clientY);
+                        if (navigator.vibrate) navigator.vibrate(50);
+                    }, 500);
+                };
+                card.ontouchmove = () => clearTimeout(pressTimer);
+                card.ontouchend = () => clearTimeout(pressTimer);
+
+                card.onclick = async () => {
+                    if (blockNoteClick) return;
+                    if (!document.getElementById('note-context-menu').classList.contains('hidden')) return;
+                    if (note.isPrivate) {
+                        let authSuccess = false;
+                        const credId = localStorage.getItem('webauthn_cred');
+                        if (credId && window.PublicKeyCredential) {
+                            try {
+                                const challenge = window.crypto.getRandomValues(new Uint8Array(32));
+                                await navigator.credentials.get({
+                                    publicKey: {
+                                        challenge,
+                                        allowCredentials: [{ type: "public-key", id: base64urlToBuffer(credId) }],
+                                        userVerification: "required",
+                                        timeout: 60000
+                                    }
+                                });
+                                authSuccess = true;
+                            } catch (err) { console.log("Fallo huella:", err); }
+                        }
+                        if (!authSuccess) {
+                            document.getElementById('pin-modal').classList.remove('hidden');
+                            document.getElementById('pin-modal').classList.add('flex');
+                            document.getElementById('pin-input').value = '';
+                            document.getElementById('pin-input').focus();
+                            window.noteToUnlock = note.id;
+                            return;
+                        }
+                    }
+                    openNote(note.id);
+                };
+                container.appendChild(card);
+            });
+        }
+
+        function renderTrashList() {
+            const container = document.getElementById('trash-container');
+            container.innerHTML = '';
+            container.className = isGridView ? 'grid grid-cols-2 gap-4 pb-28 px-1' : 'flex flex-col gap-4 pb-28 px-1';
+            const trashed = notes.filter(n => n.isTrashed).sort((a, b) => b.trashedAt - a.trashedAt);
+            if (trashed.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 italic text-center w-full mt-10">La papelera está vacía.</p>';
+                return;
+            }
+            trashed.forEach(note => {
+                const card = document.createElement('div');
+                card.className = `bg-gray-300 rounded-[20px] p-5 shadow-sm border border-gray-200 relative ${isGridView ? 'min-h-[160px]' : 'min-h-[120px]'} flex flex-col select-none opacity-75`;
+                const d = new Date(note.trashedAt);
+                const dateStr = d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+                card.innerHTML = `
+                    <div class="text-xs text-gray-500 mb-1 font-medium">Borrado el ${dateStr}</div>
+                    <strong class="block text-base text-gray-700 truncate tracking-tight line-through">${note.title || 'Sin título'}</strong>
+                    <button onclick="restoreNote('${note.id}')" class="absolute bottom-4 right-4 bg-white text-gray-700 px-3 py-1.5 rounded-full text-xs font-bold hover:text-black shadow-sm transition-colors">Restaurar</button>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        window.restoreNote = function(id) {
+            const note = notes.find(n => n.id === id);
+            if (note) { note.isTrashed = false; note.trashedAt = null; saveLocal(); renderTrashList(); }
+        };
+
+        function createNewNote(type) {
+            const defaultFolder = isSharedView ? null : activeFolderId;
+            currentNote = { id: Date.now().toString(), type, title: '', content: '', items: type === 'checklist' ? [{ text: '', checked: false }] : [], background: 'none', updatedAt: Date.now(), isTrashed: false, trashedAt: null, folderId: defaultFolder, isPrivate: false, isShared: false, time: '', notified: false };
+            if (type === 'checklist') {
+                document.getElementById('checklist-title').value = '';
+                renderChecklistEditor();
+                navTo('checklist');
+            } else {
+                document.getElementById('editor-title').value = '';
+                document.getElementById('editor-content').innerHTML = '';
+                applyEditorBackground();
+                navTo('editor');
+            }
+        }
+
+        function openNote(id) {
+            const n = notes.find(x => x.id === id);
+            if (!n) return;
+            currentNote = JSON.parse(JSON.stringify(n));
+            if (currentNote.type === 'checklist') {
+                document.getElementById('checklist-title').value = currentNote.title || '';
+                renderChecklistEditor();
+                navTo('checklist');
+            } else {
+                document.getElementById('editor-title').value = currentNote.title || '';
+                document.getElementById('editor-content').innerHTML = currentNote.content || '';
+                applyEditorBackground();
+                navTo('editor');
+            }
+        }
+
+        function saveCurrentNote() {
+            if (!currentNote || !currentNote.id) return;
+            let hasData = false;
+            if (currentNote.type === 'text') {
+                currentNote.title = document.getElementById('editor-title').value.trim();
+                currentNote.content = document.getElementById('editor-content').innerHTML.trim();
+                if (currentNote.title || currentNote.content) hasData = true;
+            } else if (currentNote.type === 'checklist') {
+                currentNote.title = document.getElementById('checklist-title').value.trim();
+                const rows = document.querySelectorAll('.checklist-item-row');
+                currentNote.items = [];
+                rows.forEach(div => {
+                    const input = div.querySelector('input[type="text"]').value.trim();
+                    const isChecked = div.dataset.checked === 'true';
+                    if (input) currentNote.items.push({ text: input, checked: isChecked });
+                });
+                if (currentNote.title || currentNote.items.length > 0) hasData = true;
+            }
+
+            if (hasData) {
+                currentNote.updatedAt = Date.now();
+                const idx = notes.findIndex(n => n.id === currentNote.id);
+                const copy = JSON.parse(JSON.stringify(currentNote));
+                if (idx > -1) notes[idx] = copy;
+                else notes.push(copy);
+                saveLocal();
+            } else {
+                const idx = notes.findIndex(n => n.id === currentNote.id);
+                if (idx > -1) { notes.splice(idx, 1); saveLocal(); }
+            }
+            currentNote = { id: null, type: 'text', title: '', content: '', items: [], background: 'none', isTrashed: false, trashedAt: null, folderId: activeFolderId, isPrivate: false, isShared: false, time: '', notified: false };
+        }
+
+        function deleteNote(id) {
+            notes = notes.filter(n => n.id !== id);
+            saveLocal();
+            if (currentView === 'notes') renderNotesList();
+            if (currentView === 'calendar') renderReminders();
+        }
+
+        function renderChecklistEditor() {
+            const container = document.getElementById('checklist-items');
+            container.innerHTML = '';
+            if (currentNote.items.length === 0) currentNote.items.push({ text: '', checked: false });
+            currentNote.items.forEach(item => {
+                const div = document.createElement('div');
+                div.className = "checklist-item-row bg-white rounded-[24px] p-4 flex items-center gap-4 shadow-sm border border-gray-100";
+                div.dataset.checked = item.checked ? 'true' : 'false';
+                const dot = item.checked ? '<div class="w-3 h-3 bg-[#CC1919] rounded-full"></div>' : '';
+                div.innerHTML = `
+                    <button onclick="toggleCheckRow(this)" class="w-7 h-7 rounded-full border-[3px] border-[#1C1C1E] flex items-center justify-center shrink-0 transition-all">${dot}</button>
+                    <input type="text" class="flex-1 outline-none text-gray-800 text-lg font-medium bg-transparent" value="${item.text.replace(/"/g, '&quot;')}" placeholder="...">
+                    <button onclick="deleteCheckRow(this)" class="text-gray-300 hover:text-red-500 shrink-0 px-2 transition-colors"><i class="ph-fill ph-x text-xl"></i></button>
+                `;
+                container.appendChild(div);
+            });
+        }
+        window.toggleCheckRow = function(btn) {
+            const row = btn.closest('.checklist-item-row');
+            const isChecked = row.dataset.checked === 'true';
+            row.dataset.checked = !isChecked;
+            btn.innerHTML = !isChecked ? '<div class="w-3 h-3 bg-[#CC1919] rounded-full"></div>' : '';
+        };
+        window.deleteCheckRow = function(btn) { btn.closest('.checklist-item-row').remove(); };
+        window.addChecklistItem = function() {
+            const container = document.getElementById('checklist-items');
+            const div = document.createElement('div');
+            div.className = "checklist-item-row bg-white rounded-[24px] p-4 flex items-center gap-4 shadow-sm border border-gray-100";
+            div.dataset.checked = 'false';
+            div.innerHTML = `
+                <button onclick="toggleCheckRow(this)" class="w-7 h-7 rounded-full border-[3px] border-[#1C1C1E] flex items-center justify-center shrink-0 transition-all"></button>
+                <input type="text" class="flex-1 outline-none text-gray-800 text-lg font-medium bg-transparent" placeholder="...">
+                <button onclick="deleteCheckRow(this)" class="text-gray-300 hover:text-red-500 shrink-0 px-2 transition-colors"><i class="ph-fill ph-x text-xl"></i></button>
+            `;
+            container.appendChild(div);
+            div.querySelector('input').focus();
+        };
+
+        function cycleBackground() {
+            const bgs = ['none', 'lined', 'grid', 'dotted'];
+            let idx = bgs.indexOf(currentNote.background);
+            currentNote.background = bgs[(idx + 1) % bgs.length];
+            applyEditorBackground();
+        }
+        function applyEditorBackground() {
+            const ed = document.getElementById('editor-content');
+            ed.className = 'flex-1 w-full outline-none p-6 text-gray-800 leading-loose rounded-b-2xl transition-all duration-300 overflow-y-auto pb-32';
+            if (currentNote.background === 'lined') ed.classList.add('bg-lined');
+            else if (currentNote.background === 'grid') ed.classList.add('bg-grid');
+            else if (currentNote.background === 'dotted') ed.classList.add('bg-dotted');
+            else ed.classList.add('bg-white');
+        }
+
+        let tableRows = 2, tableCols = 2;
+        function openTableModal() {
+            closeFanMenu();
+            document.getElementById('table-modal').classList.remove('hidden');
+            document.getElementById('table-modal').classList.add('flex');
+        }
+        function closeTableModal() {
+            document.getElementById('table-modal').classList.add('hidden');
+            document.getElementById('table-modal').classList.remove('flex');
+        }
+        function adjTable(type, delta) {
+            if (type === 'row') tableRows = Math.max(1, Math.min(10, tableRows + delta));
+            else tableCols = Math.max(1, Math.min(10, tableCols + delta));
+            document.getElementById('val-rows').innerText = tableRows;
+            document.getElementById('val-cols').innerText = tableCols;
+        }
+        function insertTable() {
+            closeTableModal();
+            if (currentView !== 'editor') createNewNote('text');
+            document.getElementById('editor-content').focus();
+            let html = `<div contenteditable="false" class="relative inline-block w-full my-6 pr-8 pb-8 group"><div class="overflow-x-auto w-full rounded-lg shadow-sm border border-gray-200 bg-white" contenteditable="true"><table class="w-full border-collapse table-fixed min-w-max"><tbody>`;
+            for (let i = 0; i < tableRows; i++) {
+                html += '<tr>';
+                for (let j = 0; j < tableCols; j++) html += `<td class="border border-gray-300 p-3 min-w-[100px] outline-none hover:bg-gray-50"><br></td>`;
+                html += '</tr>';
+            }
+            html += `</tbody></table></div><button contenteditable="false" onclick="window.addTableCol(this)" class="absolute top-1/2 right-0 -translate-y-1/2 w-6 h-6 bg-[#CC1919] text-white rounded-full flex items-center justify-center font-bold shadow-md opacity-50 hover:opacity-100 transition-opacity z-10">+</button><button contenteditable="false" onclick="window.addTableRow(this)" class="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-6 bg-[#CC1919] text-white rounded-full flex items-center justify-center font-bold shadow-md opacity-50 hover:opacity-100 transition-opacity z-10">+</button></div><p><br></p>`;
+            document.execCommand('insertHTML', false, html);
+        }
+        window.addTableCol = function(btn) {
+            btn.parentElement.querySelectorAll('tr').forEach(tr => {
+                const td = document.createElement('td');
+                td.className = 'border border-gray-300 p-3 min-w-[100px] outline-none hover:bg-gray-50';
+                td.innerHTML = '<br>';
+                tr.appendChild(td);
+            });
+        };
+        window.addTableRow = function(btn) {
+            const table = btn.parentElement.querySelector('table');
+            const cols = table.querySelector('tr').children.length;
+            const tr = document.createElement('tr');
+            for (let i = 0; i < cols; i++) {
+                const td = document.createElement('td');
+                td.className = 'border border-gray-300 p-3 min-w-[100px] outline-none hover:bg-gray-50';
+                td.innerHTML = '<br>';
+                tr.appendChild(td);
+            }
+            table.querySelector('tbody').appendChild(tr);
+        };
+
+        function updateFABState() {
+            const mainFab = document.getElementById('main-fab');
+            const calFab = document.getElementById('cal-add-fab');
+            const fanMenu = document.getElementById('fan-menu');
+            const icon = document.getElementById('main-fab-icon');
+            if (currentView === 'calendar') {
+                mainFab.classList.add('hidden');
+                fanMenu.classList.add('hidden');
+                calFab.classList.remove('hidden');
+            } else if (currentView === 'trash') {
+                mainFab.classList.add('hidden');
+                fanMenu.classList.add('hidden');
+                calFab.classList.add('hidden');
+            } else {
+                mainFab.classList.remove('hidden');
+                fanMenu.classList.remove('hidden');
+                calFab.classList.add('hidden');
+                icon.className = currentView === 'notes' ? 'ph-bold ph-pencil-simple text-3xl text-white' : 'ph-bold ph-check text-3xl text-white';
+            }
+        }
+
+        function handleFabClick(e) {
+            e.stopPropagation();
+            if (currentView === 'notes') toggleFanMenu();
+            else navTo('notes');
+        }
+        function toggleFanMenu() {
+            isFanMenuOpen = !isFanMenuOpen;
+            const fan = document.getElementById('fan-menu');
+            if (isFanMenuOpen) {
+                fan.classList.remove('scale-0', 'opacity-0', 'pointer-events-none');
+                fan.classList.add('scale-100', 'opacity-100', 'pointer-events-auto');
+            } else {
+                fan.classList.add('scale-0', 'opacity-0', 'pointer-events-none');
+                fan.classList.remove('scale-100', 'opacity-100', 'pointer-events-auto');
+            }
+        }
+        function closeFanMenu() {
+            isFanMenuOpen = false;
+            const fan = document.getElementById('fan-menu');
+            fan.classList.add('scale-0', 'opacity-0', 'pointer-events-none');
+            fan.classList.remove('scale-100', 'opacity-100', 'pointer-events-auto');
+        }
+
+        const monthNames = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+        function getFormatDateStr(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+
+        function renderCalendarGrid() {
+            document.getElementById('cal-month-year').innerText = `${monthNames[calDate.getMonth()]} ${calDate.getFullYear()}`;
+            const grid = document.getElementById('cal-grid');
+            grid.innerHTML = '';
+            const year = calDate.getFullYear(), month = calDate.getMonth();
+            const firstDay = new Date(year, month, 1).getDay();
+            const startOffset = firstDay === 0 ? 6 : firstDay - 1;
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const daysInPrev = new Date(year, month, 0).getDate();
+            for (let i = 0; i < startOffset; i++) grid.innerHTML += `<div class="text-gray-400 py-1 flex justify-center items-center h-10">${daysInPrev - startOffset + i + 1}</div>`;
+            for (let i = 1; i <= daysInMonth; i++) {
+                const checkDateStr = getFormatDateStr(new Date(year, month, i));
+                const hasReminder = notes.some(n => n.type === 'reminder' && n.date === checkDateStr && !n.isTrashed);
+                const isSelected = (year === selectedDate.getFullYear() && month === selectedDate.getMonth() && i === selectedDate.getDate());
+                const dot = hasReminder ? `<div class="absolute bottom-0 w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-[#CC1919]'}"></div>` : '';
+                if (isSelected) {
+                    grid.innerHTML += `<div class="relative flex flex-col justify-center items-center cursor-pointer h-10" onclick="selectDate(${year},${month},${i})"><div class="bg-[#CC1919] text-white rounded w-7 h-7 flex items-center justify-center font-bold shadow-sm">${i}</div>${dot}</div>`;
+                } else {
+                    grid.innerHTML += `<div class="relative flex flex-col justify-center items-center text-gray-700 cursor-pointer hover:bg-gray-200 rounded transition-colors h-10" onclick="selectDate(${year},${month},${i})"><div class="w-7 h-7 flex items-center justify-center">${i}</div>${dot}</div>`;
+                }
+            }
+            const remaining = 42 - (startOffset + daysInMonth);
+            for (let i = 1; i <= remaining; i++) grid.innerHTML += `<div class="text-gray-400 py-1 flex justify-center items-center h-10">${i}</div>`;
+        }
+
+        window.selectDate = function(y, m, d) {
+            selectedDate = new Date(y, m, d);
+            renderCalendarGrid();
+            renderReminders();
+        };
+        function changeMonth(delta) { calDate.setMonth(calDate.getMonth() + delta); renderCalendarGrid(); }
+        function initCalendarSwipe() {
+            const zone = document.getElementById('calendar-swipe-zone');
+            let startX = 0;
+            zone.addEventListener('touchstart', e => startX = e.changedTouches[0].screenX, { passive: true });
+            zone.addEventListener('touchend', e => {
+                const endX = e.changedTouches[0].screenX;
+                if (startX - endX > 50) changeMonth(1);
+                else if (endX - startX > 50) changeMonth(-1);
+            }, { passive: true });
+        }
+
+        function renderReminders() {
+            const container = document.getElementById('cal-reminders');
+            container.innerHTML = '';
+            const dayReminders = notes.filter(n => n.type === 'reminder' && n.date === getFormatDateStr(selectedDate)).sort((a, b) => a.updatedAt - b.updatedAt);
+            let html = `<h3 class="text-gray-800 text-sm font-semibold mb-2 ml-1 mt-2">${selectedDate.getDate()} de ${monthNames[selectedDate.getMonth()]} - Recordatorios</h3>`;
+            if (dayReminders.length === 0) {
+                html += `<div class="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center text-gray-400 min-h-[100px]"><i class="ph-fill ph-bell-slash text-3xl mb-2 text-gray-300"></i><p class="text-sm font-medium">No hay recordatorios.</p></div>`;
+            } else {
+                dayReminders.forEach(rem => {
+                    html += `
+                    <div class="bg-white rounded-[20px] p-4 shadow-sm border border-gray-100 flex gap-3 relative group items-start transition-shadow hover:shadow-md">
+                        <div class="w-3 h-3 rounded-full bg-[#CC1919] mt-1.5 shrink-0 shadow-sm shadow-red-900/20"></div>
+                        <div class="flex-1 flex flex-col gap-2">
+                            <div contenteditable="true" onblur="updateReminder('${rem.id}', this.innerText, null)" class="outline-none min-h-[1.5rem] text-gray-800 font-medium whitespace-pre-wrap">${rem.content}</div>
+                            <input type="time" value="${rem.time || ''}" onchange="updateReminder('${rem.id}', null, this.value)" class="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded px-2 py-1 w-24 outline-none">
+                        </div>
+                        <button onclick="deleteNote('${rem.id}')" class="text-gray-300 hover:text-[#CC1919] shrink-0 transition-colors ml-2"><i class="ph-fill ph-x text-xl"></i></button>
+                    </div>`;
+                });
+            }
+            container.innerHTML = html;
+        }
+
+        window.addReminder = function() {
+            if ("Notification" in window && Notification.permission === "default") Notification.requestPermission();
+            notes.push({ id: Date.now().toString(), type: 'reminder', date: getFormatDateStr(selectedDate), time: '', content: '', updatedAt: Date.now(), notified: false });
+            saveLocal();
+            renderReminders();
+            renderCalendarGrid();
+            setTimeout(() => {
+                const editables = document.getElementById('cal-reminders').querySelectorAll('[contenteditable="true"]');
+                if (editables.length > 0) editables[editables.length - 1].focus();
+            }, 50);
+        };
+
+        window.updateReminder = function(id, content, time) {
+            const note = notes.find(n => n.id === id);
+            if (note) {
+                if (content !== null) {
+                    if (content.trim() === '') { deleteNote(id); return; }
+                    note.content = content.trim();
+                }
+                if (time !== null) {
+                    note.time = time;
+                    note.notified = false;
+                    if (time && "Notification" in window && Notification.permission === "default") Notification.requestPermission();
+                }
+                note.updatedAt = Date.now();
+                saveLocal();
+                renderCalendarGrid();
+            }
+        };
+
+        window.openSettings = function() {
+            document.getElementById('settings-modal').classList.remove('hidden');
+            document.getElementById('settings-modal').classList.add('flex');
+            updatePersistenceStatus();
+        };
+        window.closeSettings = function() {
+            document.getElementById('settings-modal').classList.add('hidden');
+            document.getElementById('settings-modal').classList.remove('flex');
+        };
+        window.exportBackup = function() {
+            const data = { notes, folders, version: 3, exportedAt: Date.now() };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            downloadBlob(blob, `misnotas-${new Date().toISOString().slice(0, 10)}.json`);
+        };
+        window.importBackup = function(file) {
+            if (!file) return;
+            if (!confirm('¿Reemplazar TODAS las notas actuales con la copia? Esta acción no se puede deshacer.')) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+                try {
+                    const data = JSON.parse(reader.result);
+                    if (Array.isArray(data.notes)) { notes = data.notes; saveLocal(); }
+                    if (Array.isArray(data.folders)) { folders = data.folders; saveFoldersLocal(); }
+                    alert('Copia importada. La app se recargará.');
+                    location.reload();
+                } catch (e) { alert('Archivo inválido.'); }
+            };
+            reader.readAsText(file);
+        };
+
+        window.onload = initApp;
+    </script>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js').catch(console.error);
+        }
+    </script>
+</body>
+</html>

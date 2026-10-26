@@ -1,0 +1,15 @@
+{
+  "name": "Mis Notas",
+  "short_name": "Notas",
+  "description": "App personal de notas, listas y recordatorios",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#E5E5EA",
+  "theme_color": "#CC1919",
+  "lang": "es",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
