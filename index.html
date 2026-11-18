@@ -2,57 +2,63 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Mis Notas</title>
-
-    <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#CC1919">
-    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Notas">
-    <link rel="apple-touch-icon" href="icon.svg">
-
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/@phosphor-icons/web" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <!-- Phosphor Icons -->
 
     <style>
         :root {
-            --bg-color: #E5E5EA;
+            --bg-color: #E5E5EA; /* Fondo gris claro exigido */
             --sidebar-color: #D1D1D6;
             --accent-red: #CC1919;
-            --fan-coral: #DD6B66;
+            --fan-coral: #DD6B66; /* Color coral exigido */
         }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg-color);
             color: #1C1C1E;
             -webkit-tap-highlight-color: transparent;
-            user-select: none;
+            user-select: none; /* Mejor comportamiento táctil */
         }
+
+        /* Editor Backgrounds */
         .bg-lined {
-            background-color: #fff;
+            background-color: #ffffff;
             background-image: repeating-linear-gradient(transparent, transparent 39px, #E5E5EA 39px, #E5E5EA 40px);
             background-attachment: local;
         }
+        
         .bg-grid {
-            background-color: #fff;
+            background-color: #ffffff;
             background-size: 30px 30px;
-            background-image: linear-gradient(to right, #E5E5EA 1px, transparent 1px),
-                              linear-gradient(to bottom, #E5E5EA 1px, transparent 1px);
+            background-image: 
+                linear-gradient(to right, #E5E5EA 1px, transparent 1px), 
+                linear-gradient(to bottom, #E5E5EA 1px, transparent 1px);
             background-attachment: local;
         }
+        
         .bg-dotted {
-            background-color: #fff;
+            background-color: #ffffff;
             background-image: radial-gradient(#AEAEB2 1px, transparent 1px);
             background-size: 20px 20px;
             background-position: 0 0, 10px 10px;
             background-attachment: local;
         }
+
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #C7C7CC; border-radius: 10px; }
+
         [contenteditable] { user-select: text; }
         [contenteditable]:empty:before {
             content: attr(placeholder);
@@ -60,145 +66,173 @@
             pointer-events: none;
             display: block;
         }
+        
         .sidebar-text { transition: opacity 0.2s ease, width 0.2s ease; }
-        input[type="time"]::-webkit-calendar-picker-indicator { cursor: pointer; }
-        #fab-container { bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px)); }
-        .fab-cal-add  { bottom: calc(2.5rem + env(safe-area-inset-bottom, 0px)); }
-        #view-calendar { padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px)); }
+
+        input, textarea { user-select: text; }
+        button:focus-visible, input:focus-visible { outline: 2px solid #CC1919; outline-offset: 2px; }
+
+        /* Planta */
+        @keyframes drop-fall { 0% { transform: translateY(-30px); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(120px); opacity: 0; } }
+        .drop-fx { position: absolute; top: 0; color: #3B82F6; animation: drop-fall .9s ease-in forwards; }
+        @keyframes sway { 0%, 100% { transform: rotate(-1.5deg); } 50% { transform: rotate(1.5deg); } }
+        .plant-sway { transform-origin: 100px 160px; animation: sway 5s ease-in-out infinite; }
+        @media (prefers-reduced-motion: reduce) { .plant-sway, .drop-fx { animation: none; } }
     </style>
 </head>
 <body class="h-screen w-screen overflow-hidden flex relative">
 
-    <!-- Context Menu (ya sin el submenú falso de compartir) -->
-    <div id="note-context-menu" class="fixed hidden bg-[#656565]/95 backdrop-blur-md text-[#F2F2F7] w-52 rounded-xl shadow-2xl z-[100] flex-col py-2 text-[15px] font-medium border border-white/10" oncontextmenu="return false;">
-        <button onclick="showFolderSubmenu(event)" class="px-5 py-2.5 text-left hover:bg-white/10 transition-colors w-full tracking-wide flex justify-between items-center">Mover a <i class="ph-bold ph-caret-right"></i></button>
-        <button onclick="openSendModal()" class="px-5 py-2.5 text-left hover:bg-white/10 transition-colors w-full tracking-wide">Compartir</button>
-        <button onclick="downloadPDF()" class="px-5 py-2.5 text-left hover:bg-white/10 transition-colors w-full tracking-wide">Descargar PDF</button>
-        <button id="btn-share-mark" onclick="toggleShareMark()" class="px-5 py-2.5 text-left hover:bg-white/10 transition-colors w-full tracking-wide border-t border-white/10">Marcar como compartida</button>
-        <button id="btn-privacy" onclick="togglePrivacy()" class="px-5 py-2.5 text-left hover:bg-white/10 transition-colors w-full tracking-wide">Hacer privada</button>
-        <button onclick="moveToTrash()" class="px-5 py-2.5 text-left hover:bg-white/10 transition-colors w-full tracking-wide text-[#DD6B6B] border-t border-white/10">Eliminar</button>
+    <!-- Context Menu Flotante (Click Derecho / Long Press) -->
+    <div id="note-context-menu" class="fixed hidden bg-[#656565]/95 backdrop-blur-md text-[#F2F2F7] w-48 rounded-xl shadow-2xl z-[100] flex-col py-2 text-[15px] font-medium border border-white/10" oncontextmenu="return false;">
+        <button id="ctx-pin" onclick="ctxAction('pin')" class="px-5 py-2.5 text-left hover:bg-white/10 transition-colors w-full tracking-wide">Fijar arriba</button>
+        <button onclick="ctxAction('dup')" class="px-5 py-2.5 text-left hover:bg-white/10 transition-colors w-full tracking-wide">Duplicar</button>
+        <button onclick="ctxAction('del')" class="px-5 py-2.5 text-left hover:bg-white/10 transition-colors w-full tracking-wide text-[#FF8A84]">Eliminar</button>
     </div>
 
-    <div id="folder-submenu" class="fixed hidden bg-[#656565]/95 backdrop-blur-md text-[#F2F2F7] w-48 rounded-xl shadow-2xl z-[101] flex-col py-2 text-[15px] font-medium border border-white/10" oncontextmenu="return false;"></div>
-
+    <!-- Sidebar Overlay -->
     <div id="sidebar-overlay" class="fixed inset-0 bg-black/20 z-40 hidden transition-opacity" onclick="toggleSidebar()"></div>
 
-    <!-- Sidebar -->
+    <!-- Left Sidebar -->
     <aside id="sidebar" class="bg-[#D1D1D6] h-full w-16 flex flex-col items-start py-6 z-50 transition-all duration-300 relative border-r border-[#C7C7CC] shrink-0 overflow-hidden">
+        
         <button onclick="toggleSidebar()" class="w-16 h-10 flex flex-col justify-center items-center gap-1 mb-8 hover:bg-black/5 rounded-lg transition-colors shrink-0">
             <div class="w-5 h-0.5 bg-gray-800 rounded"></div>
             <div class="w-5 h-0.5 bg-gray-800 rounded"></div>
             <div class="w-5 h-0.5 bg-gray-800 rounded"></div>
         </button>
+
         <nav class="flex flex-col gap-6 w-full items-start px-3">
-            <button onclick="goToHome()" class="flex items-center text-gray-800 hover:text-black w-full px-1 py-1 overflow-hidden group">
-                <i class="ph-fill ph-house text-3xl shrink-0 transition-transform group-hover:scale-110"></i>
-                <span class="sidebar-text opacity-0 w-0 ml-0 group-hover:text-black font-medium whitespace-nowrap overflow-hidden transition-all duration-200">Todas las notas</span>
+            <button onclick="navTo('notes')" class="flex items-center text-gray-800 hover:text-black w-full px-1 py-1 overflow-hidden group">
+                <img src="icons/home.png" alt="" class="w-8 h-8 object-contain shrink-0 transition-transform group-hover:scale-110">
+                <span class="sidebar-text opacity-0 w-0 ml-0 group-hover:text-black font-medium whitespace-nowrap overflow-hidden">Todas las notas</span>
             </button>
-            <button onclick="openSharedView()" class="flex items-center text-gray-800 w-full px-1 py-1 overflow-hidden group">
-                <i class="ph-fill ph-users text-3xl shrink-0 transition-transform group-hover:scale-110"></i>
-                <span class="sidebar-text opacity-0 w-0 ml-0 group-hover:text-black font-medium whitespace-nowrap overflow-hidden transition-all duration-200">Notas compartidas</span>
+
+            <button class="flex items-center text-gray-800 w-full px-1 py-1 overflow-hidden">
+                <img src="icons/shared.png" alt="" class="w-8 h-8 object-contain shrink-0 transition-transform group-hover:scale-110">
+                <span class="sidebar-text opacity-0 w-0 ml-0 font-medium whitespace-nowrap overflow-hidden">Notas compartidas</span>
             </button>
-            <button onclick="navTo('calendar')" class="flex items-center text-gray-800 hover:text-black w-full px-1 py-1 overflow-hidden group">
-                <i class="ph-fill ph-calendar-blank text-3xl shrink-0 transition-transform group-hover:scale-110"></i>
-                <span class="sidebar-text opacity-0 w-0 ml-0 group-hover:text-black font-medium whitespace-nowrap overflow-hidden transition-all duration-200">Calendario</span>
+
+            <button onclick="navTo('calendar')" class="flex items-center text-gray-800 hover:text-black w-full px-1 py-1 overflow-hidden">
+                <img src="icons/calendar.png" alt="" class="w-8 h-8 object-contain shrink-0 transition-transform group-hover:scale-110">
+                <span class="sidebar-text opacity-0 w-0 ml-0 font-medium whitespace-nowrap overflow-hidden">Calendario</span>
             </button>
+
+            <button onclick="navTo('plant')" class="flex items-center text-gray-800 hover:text-black w-full px-1 py-1 overflow-hidden">
+                <img src="icons/plant.png" alt="" class="w-8 h-8 object-contain shrink-0">
+                <span class="sidebar-text opacity-0 w-0 ml-0 font-medium whitespace-nowrap overflow-hidden">Mi planta</span>
+            </button>
+
             <div class="w-8 h-[1px] bg-gray-400 my-1 mx-2 shrink-0"></div>
+
+            <!-- Contenedor dinámico de carpetas (Inicia vacío) -->
             <div id="sidebar-folders" class="flex flex-col gap-6 w-full items-start"></div>
+
             <div class="w-8 h-[1px] bg-gray-400 my-1 mx-2 shrink-0"></div>
-            <button onclick="navTo('trash')" class="flex items-center text-gray-800 hover:text-black w-full px-1 py-1 overflow-hidden group">
-                <i class="ph-fill ph-trash text-3xl shrink-0 transition-transform group-hover:scale-110"></i>
-                <span class="sidebar-text opacity-0 w-0 ml-0 group-hover:text-black font-medium whitespace-nowrap overflow-hidden transition-all duration-200">Papelera</span>
+
+            <button class="flex items-center text-gray-800 w-full px-1 py-1 overflow-hidden">
+                <img src="icons/trash.png" alt="" class="w-8 h-8 object-contain shrink-0 transition-transform group-hover:scale-110">
+                <span class="sidebar-text opacity-0 w-0 ml-0 font-medium whitespace-nowrap overflow-hidden">Papelera</span>
             </button>
         </nav>
+
         <div class="mt-auto w-full px-3">
-            <button onclick="openSettings()" class="flex items-center text-gray-800 w-full px-1 py-1 overflow-hidden group">
-                <i class="ph-fill ph-gear text-3xl shrink-0 transition-transform group-hover:scale-110"></i>
-                <span class="sidebar-text opacity-0 w-0 ml-0 group-hover:text-black font-medium whitespace-nowrap overflow-hidden transition-all duration-200">Ajustes</span>
+            <button class="flex items-center text-gray-800 w-full px-1 py-1 overflow-hidden">
+                <img src="icons/settings.png" alt="" class="w-8 h-8 object-contain shrink-0 transition-transform group-hover:scale-110">
+                <span class="sidebar-text opacity-0 w-0 ml-0 font-medium whitespace-nowrap overflow-hidden">Ajustes</span>
             </button>
         </div>
     </aside>
 
+    <!-- Main Content -->
     <main class="flex-1 h-full overflow-y-auto relative bg-[#E5E5EA]">
-
+        
+        <!-- Home: All Notes -->
         <div id="view-notes" class="h-full flex flex-col p-6 max-w-4xl mx-auto hidden">
-            <header class="mb-8 pb-2 relative h-10 flex items-center w-full">
-                <div id="default-header-content" class="w-full flex items-end justify-between transition-opacity duration-200">
+            <header class="flex items-end justify-between mb-8 pb-2">
+                <div class="relative">
+                    <h1 class="text-2xl font-bold text-black tracking-tight">Todas las notas</h1>
+                    <div class="absolute -bottom-2 left-0 w-full h-[2px] bg-black"></div>
+                </div>
+                <div class="flex items-center gap-3 text-gray-700">
+                    <button onclick="toggleSearch()" aria-label="Buscar" class="hover:text-black"><img src="icons/search.png" alt="" class="w-6 h-6 object-contain"></button>
+                    <button onclick="toggleGridView()" class="hover:text-black"><img id="grid-toggle-icon" src="icons/view.png" alt="" class="w-6 h-6 object-contain"><img id="grid-toggle-list" src="icons/list.png" alt="" class="w-6 h-6 object-contain hidden"></button>
                     <div class="relative">
-                        <h1 id="main-view-title" class="text-2xl font-bold text-black tracking-tight">Todas las notas</h1>
-                        <div class="absolute -bottom-2 left-0 w-full h-[2px] bg-black"></div>
-                    </div>
-                    <div class="flex items-center gap-3 text-gray-700">
-                        <button onclick="toggleSearch()" class="hover:text-black"><i class="ph-bold ph-magnifying-glass text-2xl"></i></button>
-                        <button onclick="toggleGridView()" class="hover:text-black"><i id="grid-toggle-icon" class="ph-bold ph-squares-four text-2xl"></i></button>
-                        <div class="relative">
-                            <button onclick="toggleMoreMenu(event)" class="hover:text-black"><i class="ph-bold ph-dots-three-vertical text-2xl"></i></button>
-                            <div id="more-menu" class="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 hidden z-50 flex flex-col py-2">
-                                <button onclick="promptCreateFolder()" class="px-4 py-2 text-left text-gray-800 hover:bg-gray-50 flex items-center gap-2 font-medium">
-                                    <i class="ph-bold ph-folder-plus text-xl"></i> Crear carpeta
-                                </button>
-                            </div>
+                        <button onclick="toggleMoreMenu(event)" class="hover:text-black"><img src="icons/options.png" alt="" class="h-7 w-auto object-contain"></button>
+                        <div id="more-menu" class="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 hidden z-50 flex flex-col py-2">
+                            <button onclick="promptCreateFolder()" class="px-4 py-2 text-left text-gray-800 hover:bg-gray-50 flex items-center gap-2 font-medium">
+                                <img src="icons/folder-plus.png" alt="" class="w-5 h-5 object-contain"> Crear carpeta
+                            </button>
                         </div>
                     </div>
                 </div>
-                <div id="search-header-content" class="absolute inset-0 w-full flex items-center gap-3 hidden bg-[#E5E5EA]">
-                    <div class="flex-1 flex items-center bg-white rounded-full px-4 py-2 shadow-sm border border-gray-200 focus-within:ring-2 ring-gray-200 transition-shadow">
-                        <i class="ph-bold ph-magnifying-glass text-gray-400 text-lg mr-2"></i>
-                        <input type="text" id="search-input" oninput="handleSearchInput(event)" placeholder="Buscar nota por título..." class="flex-1 bg-transparent outline-none text-gray-800 font-medium text-sm">
-                    </div>
-                    <button onclick="toggleSearch()" class="text-gray-500 hover:text-[#CC1919] p-1 transition-colors"><i class="ph-bold ph-x text-2xl"></i></button>
-                </div>
             </header>
+            <div id="search-bar" class="hidden mb-4 px-1">
+                <input id="search-input" type="search" placeholder="Buscar notas" oninput="searchQuery=this.value.trim().toLowerCase();renderNotesList()" class="w-full bg-white rounded-full px-5 py-2.5 outline-none shadow-sm border border-gray-100">
+            </div>
             <div id="notes-container" class="flex flex-col gap-4 pb-28 px-1"></div>
         </div>
 
+        <!-- Editor View -->
         <div id="view-editor" class="h-full flex flex-col p-4 md:p-6 max-w-4xl mx-auto hidden">
             <header class="flex items-center justify-between mb-4 gap-4">
                 <button onclick="navTo('notes')" class="text-gray-800 hover:bg-black/5 p-2 rounded-lg font-medium flex items-center gap-1">
-                    <i class="ph-bold ph-caret-left text-xl"></i>
+                    <img src="icons/back.png" alt="" class="w-6 h-6 object-contain">
                 </button>
                 <div class="flex-1 flex justify-center">
                     <input type="text" id="editor-title" placeholder="Título" class="bg-white rounded-full px-6 py-2 w-full max-w-sm text-center font-medium shadow-sm outline-none border border-gray-100 focus:ring-2 ring-gray-200">
                 </div>
                 <div class="flex items-center gap-2">
-                    <button onclick="cycleBackground()" class="text-gray-600 hover:text-black p-2 bg-black/5 rounded-full"><i class="ph-bold ph-magic-wand text-xl"></i></button>
+                    <button onclick="cycleBackground()" class="text-gray-600 hover:text-black p-2 bg-black/5 rounded-full"><img src="icons/wand.png" alt="" class="w-5 h-5 object-contain"></button>
+                    <button class="text-gray-800 hover:text-black p-2"><img src="icons/options.png" alt="" class="h-7 w-auto object-contain"></button>
                 </div>
             </header>
-            <div class="flex-1 flex flex-col bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden relative">
-                <div id="editor-content" contenteditable="true" placeholder="Empieza a escribir..." class="flex-1 w-full outline-none p-6 text-gray-800 leading-loose rounded-b-2xl transition-all duration-300 overflow-y-auto pb-32 bg-white"></div>
+            <div class="flex-1 flex flex-col bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden relative pb-16">
+                <div id="editor-content" contenteditable="true" placeholder="Empieza a escribir..." class="flex-1 w-full outline-none p-6 text-gray-800 leading-loose rounded-b-2xl transition-all duration-300 min-h-[50vh] bg-white"></div>
             </div>
         </div>
 
+        <!-- Checklist View -->
         <div id="view-checklist" class="hidden h-full flex flex-col p-4 md:p-6 max-w-4xl mx-auto">
             <header class="flex items-center justify-between mb-8 gap-4">
                 <button onclick="navTo('notes')" class="text-gray-800 hover:bg-black/5 p-2 rounded-lg font-medium flex items-center gap-1">
-                    <i class="ph-bold ph-caret-left text-xl"></i>
+                    <img src="icons/back.png" alt="" class="w-6 h-6 object-contain">
                 </button>
                 <div class="flex-1 flex justify-center">
                     <input type="text" id="checklist-title" placeholder="Título" class="bg-white rounded-full px-6 py-2 w-full max-w-sm text-center font-medium shadow-sm outline-none border border-gray-100">
                 </div>
-                <div class="w-10"></div>
+                <button class="text-gray-800 p-2"><img src="icons/options.png" alt="" class="h-7 w-auto object-contain"></button>
             </header>
-            <div id="checklist-items" class="flex-1 overflow-y-auto px-2 flex flex-col gap-3 pb-32"></div>
-            <div class="fixed fab-cal-add left-0 w-full flex justify-center pointer-events-none z-10 pl-16">
+            
+            <div id="checklist-items" class="flex flex-col gap-3 pb-24"></div>
+
+            <div class="fixed bottom-10 left-0 w-full flex justify-center pointer-events-none z-10 pl-16">
                 <button onclick="addChecklistItem()" class="w-12 h-12 bg-[#CC1919] text-white rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition-transform pointer-events-auto">
-                    <i class="ph-bold ph-plus text-2xl"></i>
+                    <img src="icons/plus-white.png" alt="" class="w-6 h-6 object-contain">
                 </button>
             </div>
         </div>
 
-        <div id="view-calendar" class="h-full flex flex-col p-6 max-w-lg mx-auto relative overflow-y-auto hidden">
+        <!-- Calendar View -->
+        <div id="view-calendar" class="h-full flex flex-col p-6 max-w-lg mx-auto relative overflow-y-auto">
             <header class="flex items-end justify-between mb-8 pb-2">
                 <div class="relative">
                     <h1 class="text-2xl font-bold text-black tracking-tight">Calendario</h1>
                     <div class="absolute -bottom-2 left-0 w-full h-[2px] bg-black"></div>
                 </div>
+                <div class="flex items-center gap-3 text-gray-700">
+                    <button class="hover:text-black"><img src="icons/search.png" alt="" class="w-6 h-6 object-contain"></button>
+                    <button class="hover:text-black"><img src="icons/view.png" alt="" class="w-6 h-6 object-contain"></button>
+                    <button class="hover:text-black"><img src="icons/options.png" alt="" class="h-7 w-auto object-contain"></button>
+                </div>
             </header>
+
             <div class="w-full bg-[#B3B3B3] rounded-full py-2 flex justify-between items-center shadow-inner mb-6 px-4">
-                <button onclick="changeMonth(-1)" class="text-gray-700 hover:text-black p-1"><i class="ph-bold ph-caret-left"></i></button>
-                <span id="cal-month-year" class="font-medium text-gray-800 tracking-wide capitalize">--</span>
-                <button onclick="changeMonth(1)" class="text-gray-700 hover:text-black p-1"><i class="ph-bold ph-caret-right"></i></button>
+                <button onclick="changeMonth(-1)" class="text-gray-700 hover:text-black p-1"><img src="icons/back.png" alt="" class="w-5 h-5 object-contain"></button>
+                <span id="cal-month-year" class="font-medium text-gray-800 tracking-wide capitalize">Octubre 2026</span>
+                <button onclick="changeMonth(1)" class="text-gray-700 hover:text-black p-1"><img src="icons/next.png" alt="" class="w-5 h-5 object-contain"></button>
             </div>
+
+            <!-- Zona Swipe Calendario -->
             <div id="calendar-swipe-zone" class="w-full pb-4 border-b border-[#D1D1D6] mb-6">
                 <div class="grid grid-cols-7 gap-y-6 text-center text-sm font-medium mb-4">
                     <div class="text-gray-800">L</div><div class="text-gray-800">M</div><div class="text-gray-800">X</div>
@@ -206,40 +240,87 @@
                 </div>
                 <div id="cal-grid" class="grid grid-cols-7 gap-y-4 text-center text-sm font-medium"></div>
             </div>
+
+            <!-- Recordatorios -->
             <div id="cal-reminders" class="flex flex-col gap-3 pb-32"></div>
         </div>
 
-        <div id="view-trash" class="h-full flex flex-col p-6 max-w-4xl mx-auto hidden">
+        <!-- Planta: riega estudiando -->
+        <div id="view-plant" class="hidden h-full flex flex-col p-6 max-w-lg mx-auto overflow-y-auto">
             <header class="flex items-end justify-between mb-8 pb-2">
                 <div class="relative">
-                    <h1 class="text-2xl font-bold text-[#DD6B6B] tracking-tight">Papelera</h1>
-                    <div class="absolute -bottom-2 left-0 w-full h-[2px] bg-[#DD6B6B]"></div>
+                    <h1 class="text-2xl font-bold text-black tracking-tight">Mi planta</h1>
+                    <div class="absolute -bottom-2 left-0 w-full h-[2px] bg-black"></div>
                 </div>
             </header>
-            <p class="text-sm text-gray-500 mb-6 font-medium">Las notas se eliminarán permanentemente después de 7 días.</p>
-            <div id="trash-container" class="flex flex-col gap-4 pb-28 px-1"></div>
+
+            <div class="bg-white rounded-[28px] shadow-sm border border-gray-100 p-5 flex flex-col items-center mb-4">
+                <div id="plant-art" class="relative w-48 h-52"></div>
+                <div id="plant-stage" class="text-lg font-bold text-gray-900 mt-1"></div>
+                <div id="plant-status" class="text-sm text-gray-500 text-center mt-1 min-h-[1.25rem]"></div>
+                <div class="w-full mt-4">
+                    <div class="h-2 rounded-full bg-[#E5E5EA] overflow-hidden"><div id="plant-bar" class="h-full bg-[#3E9B54] rounded-full transition-all duration-500" style="width:0%"></div></div>
+                    <div id="plant-next" class="text-xs text-gray-400 mt-1.5 text-center"></div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-[28px] shadow-sm border border-gray-100 p-5 mb-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="text-xs text-gray-400 font-medium">Sesión de estudio</div>
+                        <div id="plant-timer" class="text-4xl font-bold tabular-nums tracking-tight text-gray-900">00:00:00</div>
+                    </div>
+                    <button id="plant-toggle" onclick="togglePlantTimer()" aria-label="Iniciar o pausar" class="w-16 h-16 rounded-full bg-[#CC1919] text-white shadow-lg shadow-red-900/30 flex items-center justify-center hover:scale-105 transition-transform">
+                        <img id="plant-toggle-icon" src="icons/play.png" alt="" class="w-8 h-8 object-contain">
+                    </button>
+                </div>
+                <div class="text-sm text-gray-500 mt-3">Hoy has estudiado <span id="plant-today" class="font-semibold text-gray-800">0 min</span></div>
+            </div>
+
+            <button id="plant-water" onclick="waterPlant()" class="w-full rounded-[24px] py-4 bg-[#1A1A1A] text-white font-bold text-lg flex items-center justify-center gap-2 shadow-md transition-all">
+                <img src="icons/drop-white.png" alt="" class="w-6 h-6 object-contain"><span id="plant-water-label">Regar</span>
+            </button>
+            <p class="text-xs text-gray-400 text-center mt-3 pb-8">Cada hora de estudio te da un riego. Riega para que la planta crezca.</p>
         </div>
     </main>
 
-    <div id="fab-container" class="fixed right-6 z-40 w-16 h-16 pointer-events-auto">
+    <!-- Área de Botones Flotantes y Menú Abanico (Fan Menu) -->
+    <div id="fab-container" class="fixed bottom-6 right-6 z-40 w-16 h-16 pointer-events-auto">
+        
+        <!-- Menú Coral SVG Matemáticamente Exacto de 256x256 -->
         <div id="fan-menu" class="absolute bottom-2 right-2 w-64 h-64 origin-bottom-right transition-all duration-300 scale-0 opacity-0 pointer-events-none hidden">
+            <!-- Arco con centro desplazado. Radio R=192. Inicio (32,224) a (224,32) -->
             <svg viewBox="0 0 256 256" class="absolute inset-0 w-full h-full pointer-events-none">
                 <path d="M 32 224 A 192 192 0 0 1 224 32" stroke="var(--fan-coral)" stroke-width="48" stroke-linecap="round" fill="none" class="pointer-events-auto"></path>
             </svg>
-            <button onclick="createNewNote('text')" class="absolute text-[#1C1C1E] hover:scale-110 transition-transform pointer-events-auto z-10 translate-x-1/2 translate-y-1/2" style="bottom: 32px; right: 224px;" title="Nota"><i class="ph-fill ph-text-align-left text-[32px]"></i></button>
-            <button onclick="openTableModal()" class="absolute text-[#1C1C1E] hover:scale-110 transition-transform pointer-events-auto z-10 translate-x-1/2 translate-y-1/2" style="bottom: 128px; right: 198.27px;" title="Tabla"><i class="ph-fill ph-table text-[32px]"></i></button>
-            <button onclick="createNewNote('checklist')" class="absolute text-[#1C1C1E] hover:scale-110 transition-transform pointer-events-auto z-10 translate-x-1/2 translate-y-1/2" style="bottom: 198.27px; right: 128px;" title="Checklist"><i class="ph-fill ph-check-square-offset text-[32px]"></i></button>
-            <button onclick="navTo('calendar')" class="absolute text-[#1C1C1E] hover:scale-110 transition-transform pointer-events-auto z-10 translate-x-1/2 translate-y-1/2" style="bottom: 224px; right: 32px;" title="Recordatorio"><i class="ph-fill ph-bell text-[32px]"></i></button>
+
+            <!-- Iconos anclados exactamente a los ángulos trigonométricos (0°, 30°, 60°, 90°) -->
+            <button onclick="createNewNote('text')" class="absolute text-[#1C1C1E] hover:scale-110 transition-transform pointer-events-auto z-10 translate-x-1/2 translate-y-1/2" style="bottom: 32px; right: 224px;" title="Nota">
+                <img src="icons/note.png" alt="" class="w-8 h-8 object-contain">
+            </button>
+            <button onclick="openTableModal()" class="absolute text-[#1C1C1E] hover:scale-110 transition-transform pointer-events-auto z-10 translate-x-1/2 translate-y-1/2" style="bottom: 128px; right: 198.27px;" title="Tabla">
+                <img src="icons/table.png" alt="" class="w-8 h-8 object-contain">
+            </button>
+            <button onclick="createNewNote('checklist')" class="absolute text-[#1C1C1E] hover:scale-110 transition-transform pointer-events-auto z-10 translate-x-1/2 translate-y-1/2" style="bottom: 198.27px; right: 128px;" title="Checklist">
+                <img src="icons/checklist.png" alt="" class="w-8 h-8 object-contain">
+            </button>
+            <button onclick="navTo('calendar')" class="absolute text-[#1C1C1E] hover:scale-110 transition-transform pointer-events-auto z-10 translate-x-1/2 translate-y-1/2" style="bottom: 224px; right: 32px;" title="Recordatorio">
+                <img src="icons/bell.png" alt="" class="w-8 h-8 object-contain">
+            </button>
         </div>
+
+        <!-- FAB Principal (Lápiz) -->
         <button id="main-fab" onclick="handleFabClick(event)" class="absolute bottom-0 right-0 w-16 h-16 bg-[#CC1919] text-white rounded-full shadow-xl shadow-red-900/30 flex items-center justify-center hover:scale-105 transition-transform z-20 pointer-events-auto hidden">
-            <i id="main-fab-icon" class="ph-bold ph-pencil-simple text-3xl text-white"></i>
+            <img id="main-fab-pencil" src="icons/pencil.png" alt="" class="w-8 h-8 object-contain"><img id="main-fab-icon" src="icons/check.png" alt="" class="w-8 h-8 object-contain hidden">
         </button>
-        <button id="cal-add-fab" onclick="addReminder()" class="absolute bottom-0 right-0 w-16 h-16 bg-[#CC1919] text-white rounded-full shadow-xl shadow-red-900/30 flex items-center justify-center hover:scale-105 transition-transform z-20 pointer-events-auto hidden">
-            <i class="ph-bold ph-plus text-3xl text-white"></i>
+
+        <!-- FAB Específico de Calendario (+) -->
+        <button id="cal-add-fab" onclick="addReminder()" class="absolute bottom-0 right-0 w-16 h-16 bg-[#CC1919] text-white rounded-full shadow-xl shadow-red-900/30 flex items-center justify-center hover:scale-105 transition-transform z-20 pointer-events-auto">
+            <img src="icons/plus-white.png" alt="" class="w-8 h-8 object-contain">
         </button>
     </div>
 
-    <!-- Modal Tabla -->
+    <!-- Modal para Configurar Tablas -->
     <div id="table-modal" class="fixed inset-0 bg-black/30 z-50 items-center justify-center p-4 backdrop-blur-sm hidden">
         <div class="bg-[#E2E2E6] p-6 rounded-2xl shadow-2xl w-full max-w-xs relative border border-gray-300">
             <div class="relative mb-6">
@@ -249,17 +330,17 @@
             <div class="flex items-center justify-between mb-4">
                 <span class="text-gray-700">Filas</span>
                 <div class="flex items-center gap-3">
-                    <button onclick="adjTable('row', -1)" class="text-gray-800"><i class="ph-fill ph-caret-left text-xl"></i></button>
+                    <button onclick="adjTable('row', -1)" class="text-gray-800"><img src="icons/back.png" alt="" class="w-5 h-5 object-contain"></button>
                     <div class="bg-white w-10 text-center py-0.5 rounded-full text-sm font-medium" id="val-rows">2</div>
-                    <button onclick="adjTable('row', 1)" class="text-gray-800"><i class="ph-fill ph-caret-right text-xl"></i></button>
+                    <button onclick="adjTable('row', 1)" class="text-gray-800"><img src="icons/next.png" alt="" class="w-5 h-5 object-contain"></button>
                 </div>
             </div>
             <div class="flex items-center justify-between mb-8">
                 <span class="text-gray-700">Columnas</span>
                 <div class="flex items-center gap-3">
-                    <button onclick="adjTable('col', -1)" class="text-gray-800"><i class="ph-fill ph-caret-left text-xl"></i></button>
+                    <button onclick="adjTable('col', -1)" class="text-gray-800"><img src="icons/back.png" alt="" class="w-5 h-5 object-contain"></button>
                     <div class="bg-white w-10 text-center py-0.5 rounded-full text-sm font-medium" id="val-cols">2</div>
-                    <button onclick="adjTable('col', 1)" class="text-gray-800"><i class="ph-fill ph-caret-right text-xl"></i></button>
+                    <button onclick="adjTable('col', 1)" class="text-gray-800"><img src="icons/next.png" alt="" class="w-5 h-5 object-contain"></button>
                 </div>
             </div>
             <div class="flex justify-end mt-2">
@@ -269,7 +350,7 @@
         </div>
     </div>
 
-    <!-- Modal Carpeta -->
+    <!-- Modal para Crear Carpeta (Estilo exacto de la imagen) -->
     <div id="folder-modal" class="fixed inset-0 bg-black/40 z-50 items-center justify-center p-4 backdrop-blur-sm hidden" onclick="if(event.target===this) closeFolderModal()">
         <div class="bg-[#5D5D5D] p-6 rounded-3xl shadow-2xl w-full max-w-[300px] relative border border-gray-500">
             <input type="text" id="folder-name-input" placeholder="Nombre" class="w-full bg-transparent border-b border-white text-white placeholder-gray-300 outline-none text-lg mb-6 pb-2">
@@ -286,57 +367,14 @@
         </div>
     </div>
 
-    <!-- Modal Compartir -->
-    <div id="send-modal" class="fixed inset-0 bg-black/40 z-50 items-center justify-center p-4 backdrop-blur-sm hidden" onclick="if(event.target===this) closeSendModal()">
-        <div class="bg-[#5D5D5D] p-6 rounded-3xl shadow-2xl w-full max-w-[300px] relative border border-gray-500 text-white flex flex-col gap-4">
-            <h3 class="text-lg font-bold mb-1 text-center">Compartir nota como...</h3>
-            <p class="text-[13px] text-gray-300 text-center mb-2 leading-tight">Se abrirá el menú nativo del sistema (WhatsApp, Telegram, Gmail, AirDrop, etc.).</p>
-            <button onclick="shareAsPDF()" class="bg-white/10 hover:bg-white/20 px-4 py-3 rounded-xl font-medium transition-colors flex items-center justify-center gap-3 border border-white/10">
-                <i class="ph-fill ph-file-pdf text-2xl text-[#DD6B6B]"></i> Documento PDF
-            </button>
-            <button onclick="shareAsText()" class="bg-white/10 hover:bg-white/20 px-4 py-3 rounded-xl font-medium transition-colors flex items-center justify-center gap-3 border border-white/10">
-                <i class="ph-fill ph-file-text text-2xl text-[#3B82F6]"></i> Texto plano
-            </button>
-            <button onclick="closeSendModal()" class="mt-2 text-sm text-gray-400 hover:text-white transition-colors">Cancelar</button>
-        </div>
-    </div>
-
-    <!-- Modal PIN -->
-    <div id="pin-modal" class="fixed inset-0 bg-black/60 z-[200] hidden items-center justify-center p-4 backdrop-blur-md" onclick="if(event.target===this) closePinModal()">
-        <div class="bg-[#5D5D5D] p-8 rounded-3xl shadow-2xl w-full max-w-[300px] relative border border-gray-500 text-white flex flex-col items-center">
-            <div class="w-16 h-16 rounded-full bg-[#CC1919]/20 flex items-center justify-center mb-4">
-                <i class="ph-fill ph-lock-key text-3xl text-[#CC1919]"></i>
-            </div>
-            <h3 class="text-xl font-bold mb-2 text-center">Nota Privada</h3>
-            <p class="text-[13px] text-gray-300 text-center mb-6 leading-tight">Introduce tu PIN de respaldo.</p>
-            <input type="password" id="pin-input" class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-center text-2xl tracking-[0.5em] outline-none mb-6 focus:border-[#CC1919] transition-colors" maxlength="8" placeholder="••••">
-            <div class="flex w-full gap-3">
-                <button onclick="closePinModal()" class="flex-1 bg-white/10 hover:bg-white/20 py-2.5 rounded-xl font-medium transition-colors text-sm">Cancelar</button>
-                <button onclick="verifyPinFallback()" class="flex-1 bg-[#CC1919] hover:bg-red-700 py-2.5 rounded-xl font-medium transition-colors text-sm shadow-md">Abrir</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal Ajustes -->
-    <div id="settings-modal" class="fixed inset-0 bg-black/40 z-50 items-center justify-center p-4 backdrop-blur-sm hidden" onclick="if(event.target===this) closeSettings()">
-        <div class="bg-[#5D5D5D] p-6 rounded-3xl shadow-2xl w-full max-w-[340px] text-white flex flex-col gap-3">
-            <h3 class="text-lg font-bold mb-1 text-center">Ajustes</h3>
-            <button onclick="exportBackup()" class="bg-white/10 hover:bg-white/20 px-4 py-3 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 border border-white/10">
-                <i class="ph-fill ph-download-simple text-xl"></i> Exportar copia de seguridad
-            </button>
-            <label class="bg-white/10 hover:bg-white/20 px-4 py-3 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 border border-white/10 cursor-pointer">
-                <i class="ph-fill ph-upload-simple text-xl"></i> Importar copia
-                <input type="file" accept=".json,application/json" class="hidden" onchange="importBackup(this.files[0])">
-            </label>
-            <p class="text-[11px] text-gray-400 text-center mt-2 leading-relaxed px-2">
-                Tus notas viven solo en este dispositivo. Exporta una copia periódicamente.
-            </p>
-            <p id="persistence-status" class="text-[11px] text-gray-400 text-center leading-relaxed px-2">Comprobando almacenamiento...</p>
-            <button onclick="closeSettings()" class="mt-2 text-sm text-gray-400 hover:text-white transition-colors">Cerrar</button>
-        </div>
-    </div>
-
+    <!-- Scripts -->
     <script>
+        // --- Utilidades ---
+        const esc = t => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        const plain = html => new DOMParser().parseFromString(html || '', 'text/html').body.textContent || '';
+        const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+
+        // --- Estado General ---
         let notes = [];
         let folders = [];
         let currentView = 'notes';
@@ -345,162 +383,67 @@
         let isGridView = false;
         let isMoreMenuOpen = false;
         let selectedFolderColor = '#CC1919';
-        let blockNoteClick = false;
-
-        let activeFolderId = null;
-        let isSharedView = false;
-        let currentSearchTerm = '';
-
-        let currentNote = { id: null, type: 'text', title: '', content: '', items: [], background: 'none', isTrashed: false, trashedAt: null, folderId: null, isPrivate: false, isShared: false, time: '', notified: false };
-        let activeContextMenuNoteId = null;
+        let ctxNoteId = null;
+        let searchQuery = '';
+        let blockNoteClick = false; // Bloqueo anti-toque accidental al abrir menús
+        
+        let currentNote = { id: null, type: 'text', title: '', content: '', items: [], background: 'none' };
 
         const TODAY = new Date();
-        let calDate = new Date(TODAY.getFullYear(), TODAY.getMonth(), 1);
-        let selectedDate = new Date(TODAY.getTime());
+        let calDate = new Date(TODAY.getFullYear(), TODAY.getMonth(), 1); 
+        let selectedDate = new Date(TODAY.getTime()); 
 
+        // --- Inicialización y Guardado Local ---
         function initApp() {
             const localData = localStorage.getItem('figma_notes_v3');
-            if (localData) notes = JSON.parse(localData);
+            if(localData) notes = JSON.parse(localData);
+            
             const localFolders = localStorage.getItem('figma_folders_v2');
-            if (localFolders) folders = JSON.parse(localFolders);
-
-            let needsSave = false;
-            notes.forEach((n, idx) => {
-                if (!n.id) { n.id = Date.now().toString() + '-' + idx; needsSave = true; }
-                if (n.isShared === undefined) { n.isShared = false; needsSave = true; }
-                if (n.type === 'reminder' && n.time === undefined) { n.time = ''; n.notified = false; needsSave = true; }
-            });
-            if (needsSave) saveLocal();
-
-            cleanupTrash();
+            if(localFolders) folders = JSON.parse(localFolders);
+            
+            loadPlant();
             renderNotesList();
             renderSidebarFolders();
             initCalendarSwipe();
-            startNotificationChecker();
-            goToHome();
+            navTo('notes');
 
-            // Solicitar almacenamiento persistente (evita borrado automático)
-            requestStoragePersistence();
-        }
+            // Autoguardado: no se pierde nada si se cierra la app a medias
+            const auto = debounce(() => {
+                if (currentNote.id && (currentView === 'editor' || currentView === 'checklist')) saveCurrentNote(true);
+            }, 700);
+            ['editor-title', 'editor-content', 'checklist-title', 'checklist-items'].forEach(id => {
+                const el = document.getElementById(id);
+                el.addEventListener('input', auto);
+                el.addEventListener('click', auto);
+            });
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden && currentNote.id && (currentView === 'editor' || currentView === 'checklist')) saveCurrentNote(true);
+            });
 
-        // ✅ Solicita persistencia; el navegador deja de borrar los datos por falta de espacio
-        async function requestStoragePersistence() {
-            try {
-                if (!navigator.storage || !navigator.storage.persist) return;
-                const already = await navigator.storage.persisted();
-                if (already) return;
-                const granted = await navigator.storage.persist();
-                console.log('Persistencia de almacenamiento:', granted ? 'concedida' : 'denegada');
-            } catch (err) {
-                console.log('Persistencia no disponible:', err);
-            }
-        }
-
-        async function updatePersistenceStatus() {
-            const el = document.getElementById('persistence-status');
-            if (!el) return;
-            if (!navigator.storage || !navigator.storage.persisted) {
-                el.textContent = '⚠️ Este navegador no protege el almacenamiento';
-                el.className = 'text-[11px] text-yellow-400 text-center leading-relaxed px-2';
-                return;
-            }
-            try {
-                const persisted = await navigator.storage.persisted();
-                if (persisted) {
-                    el.textContent = '✅ Almacenamiento protegido (no se borrará automáticamente)';
-                    el.className = 'text-[11px] text-green-400 text-center leading-relaxed px-2';
-                } else {
-                    el.textContent = '⚠️ Almacenamiento sin protección. Instala la app y úsala más para conseguirlo.';
-                    el.className = 'text-[11px] text-yellow-400 text-center leading-relaxed px-2';
-                }
-            } catch (err) {
-                el.textContent = '⚠️ No se pudo comprobar el estado del almacenamiento';
-                el.className = 'text-[11px] text-yellow-400 text-center leading-relaxed px-2';
-            }
+            setInterval(() => { if (currentView === 'plant') renderPlantTimer(); }, 1000);
+            if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
         }
 
         function saveLocal() { localStorage.setItem('figma_notes_v3', JSON.stringify(notes)); }
         function saveFoldersLocal() { localStorage.setItem('figma_folders_v2', JSON.stringify(folders)); }
 
-        function cleanupTrash() {
-            const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-            const now = Date.now();
-            let changed = false;
-            notes = notes.filter(n => {
-                if (n.isTrashed && (now - n.trashedAt > sevenDaysMs)) { changed = true; return false; }
-                return true;
-            });
-            if (changed) saveLocal();
-        }
-
-        function toggleSearch() {
-            const def = document.getElementById('default-header-content');
-            const search = document.getElementById('search-header-content');
-            if (def.classList.contains('hidden')) {
-                def.classList.remove('hidden');
-                search.classList.add('hidden');
-                currentSearchTerm = '';
-                document.getElementById('search-input').value = '';
-                renderNotesList();
-            } else {
-                def.classList.add('hidden');
-                search.classList.remove('hidden');
-                document.getElementById('search-input').focus();
-            }
-        }
-        function handleSearchInput(e) { currentSearchTerm = e.target.value.toLowerCase(); renderNotesList(); }
-        function resetSearchState() {
-            currentSearchTerm = '';
-            const s = document.getElementById('search-input');
-            if (s) s.value = '';
-            document.getElementById('default-header-content').classList.remove('hidden');
-            document.getElementById('search-header-content').classList.add('hidden');
-        }
-
-        function startNotificationChecker() {
-            setInterval(() => {
-                if (!("Notification" in window) || Notification.permission !== "granted") return;
-                const now = new Date();
-                const currentDate = getFormatDateStr(now);
-                const currentTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-                let needsSave = false;
-                notes.forEach(n => {
-                    if (n.type === 'reminder' && n.date === currentDate && n.time === currentTime && !n.isTrashed && !n.notified) {
-                        new Notification("Mis Notas", { body: n.content || "Recordatorio pendiente." });
-                        n.notified = true;
-                        needsSave = true;
-                    }
-                });
-                if (needsSave) saveLocal();
-            }, 30000);
-        }
-
-        function bufferToBase64url(buffer) {
-            return btoa(String.fromCharCode(...new Uint8Array(buffer))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
-        }
-        function base64urlToBuffer(base64url) {
-            const padding = "==".slice(0, (4 - base64url.length % 4) % 4);
-            const base64 = (base64url + padding).replace(/-/g, "+").replace(/_/g, "/");
-            const str = atob(base64);
-            const buffer = new ArrayBuffer(str.length);
-            const byteView = new Uint8Array(buffer);
-            for (let i = 0; i < str.length; i++) byteView[i] = str.charCodeAt(i);
-            return buffer;
-        }
-
+        // --- Sidebar y Menús ---
         function toggleSidebar() {
             isSidebarOpen = !isSidebarOpen;
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebar-overlay');
             const texts = document.querySelectorAll('.sidebar-text');
+            
             if (isSidebarOpen) {
                 sidebar.classList.remove('w-16');
                 sidebar.classList.add('w-64', 'shadow-2xl');
                 overlay.classList.remove('hidden');
-                setTimeout(() => texts.forEach(t => {
-                    t.classList.remove('w-0', 'ml-0');
-                    t.classList.add('w-auto', 'ml-4', 'opacity-100');
-                }), 150);
+                setTimeout(() => {
+                    texts.forEach(t => {
+                        t.classList.remove('w-0', 'ml-0');
+                        t.classList.add('w-auto', 'ml-4', 'opacity-100');
+                    });
+                }, 150);
             } else {
                 sidebar.classList.remove('w-64', 'shadow-2xl');
                 sidebar.classList.add('w-16');
@@ -515,7 +458,8 @@
 
         function toggleGridView() {
             isGridView = !isGridView;
-            document.getElementById('grid-toggle-icon').className = isGridView ? 'ph-bold ph-list text-2xl' : 'ph-bold ph-squares-four text-2xl';
+            document.getElementById('grid-toggle-icon').classList.toggle('hidden', isGridView);
+            document.getElementById('grid-toggle-list').classList.toggle('hidden', !isGridView);
             renderNotesList();
         }
 
@@ -525,241 +469,44 @@
             document.getElementById('more-menu').classList.toggle('hidden', !isMoreMenuOpen);
         }
 
+        // --- Context Menu Flotante (Long Press / Click Derecho) ---
         window.showContextMenu = function(id, x, y) {
-            blockNoteClick = true;
-            activeContextMenuNoteId = id;
-            const note = notes.find(n => n.id === id);
-            if (note) {
-                document.getElementById('btn-privacy').innerText = note.isPrivate ? "Quitar privacidad" : "Hacer privada";
-                document.getElementById('btn-share-mark').innerText = note.isShared ? "Quitar de compartidas" : "Marcar como compartida";
-            }
+            blockNoteClick = true; // Previene que se abra la nota accidentalmente
+            ctxNoteId = id;
+            const cn = notes.find(x => x.id === id);
+            document.getElementById('ctx-pin').textContent = cn && cn.pinned ? 'Quitar fijado' : 'Fijar arriba';
             const menu = document.getElementById('note-context-menu');
             menu.classList.remove('hidden');
             menu.classList.add('flex');
-            let posX = x, posY = y;
-            if (posX + 210 > window.innerWidth) posX = window.innerWidth - 210;
-            if (posY + 300 > window.innerHeight) posY = window.innerHeight - 300;
+            
+            // Cálculos para evitar que se salga de la pantalla
+            let posX = x;
+            let posY = y;
+            if (posX + 200 > window.innerWidth) posX = window.innerWidth - 200;
+            if (posY + 250 > window.innerHeight) posY = window.innerHeight - 250;
+            
             menu.style.left = `${posX}px`;
             menu.style.top = `${posY}px`;
-            document.getElementById('folder-submenu').classList.add('hidden');
-            document.getElementById('folder-submenu').classList.remove('flex');
+            
             setTimeout(() => blockNoteClick = false, 300);
-        };
-
-        window.showFolderSubmenu = function(e) {
-            e.stopPropagation();
-            const submenu = document.getElementById('folder-submenu');
-            submenu.innerHTML = '';
-            if (folders.length === 0) {
-                submenu.innerHTML = '<div class="px-5 py-2.5 text-gray-400 italic">No hay carpetas</div>';
-            } else {
-                folders.forEach(f => {
-                    submenu.innerHTML += `<button onclick="moveNoteToFolder('${f.id}')" class="px-5 py-2.5 text-left hover:bg-white/10 transition-colors w-full tracking-wide flex items-center gap-2"><i class="ph-fill ph-folder text-lg" style="color:${f.color}"></i> ${f.name}</button>`;
-                });
-            }
-            submenu.classList.remove('hidden');
-            submenu.classList.add('flex');
-            const rect = document.getElementById('note-context-menu').getBoundingClientRect();
-            let posX = rect.right + 5, posY = rect.top;
-            if (posX + 200 > window.innerWidth) posX = rect.left - 200 - 5;
-            if (posY + 250 > window.innerHeight) posY = window.innerHeight - 250;
-            submenu.style.left = `${posX}px`;
-            submenu.style.top = `${posY}px`;
-        };
-
-        // ✅ Toggle manual de "compartida"
-        window.toggleShareMark = function() {
-            const note = notes.find(n => n.id === activeContextMenuNoteId);
-            if (note) {
-                note.isShared = !note.isShared;
-                saveLocal();
-                if (currentView === 'notes') renderNotesList();
-            }
-            hideContextMenu();
-        };
-
-        // ✅ Marca como compartida automáticamente cuando el share nativo tiene éxito
-        function markNoteAsShared(note) {
-            if (!note || note.isShared) return;
-            note.isShared = true;
-            saveLocal();
-            if (currentView === 'notes') renderNotesList();
         }
-
-        window.togglePrivacy = async function() {
-            const note = notes.find(n => n.id === activeContextMenuNoteId);
-            if (!note) return;
-            if (!note.isPrivate) {
-                let hasSetup = localStorage.getItem('master_pin');
-                if (!hasSetup) {
-                    const pin = prompt("Crea un PIN de respaldo (mín. 4 dígitos). Lo necesitarás si falla la huella.");
-                    if (!pin || pin.length < 4) { alert("PIN inválido. Operación cancelada."); return; }
-                    localStorage.setItem('master_pin', pin);
-                    if (window.PublicKeyCredential) {
-                        try {
-                            const challenge = window.crypto.getRandomValues(new Uint8Array(32));
-                            const userId = window.crypto.getRandomValues(new Uint8Array(16));
-                            const cred = await navigator.credentials.create({
-                                publicKey: {
-                                    challenge,
-                                    rp: { name: "Mis Notas App" },
-                                    user: { id: userId, name: "usuario", displayName: "Usuario" },
-                                    pubKeyCredParams: [{ alg: -7, type: "public-key" }, { alg: -257, type: "public-key" }],
-                                    authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
-                                    timeout: 60000,
-                                }
-                            });
-                            localStorage.setItem('webauthn_cred', bufferToBase64url(cred.rawId));
-                        } catch (err) { console.log("WebAuthn omitido:", err); }
-                    }
-                }
-                note.isPrivate = true;
-            } else {
-                note.isPrivate = false;
-            }
-            saveLocal();
-            renderNotesList();
-            hideContextMenu();
-        };
-
-        window.closePinModal = function() {
-            document.getElementById('pin-modal').classList.add('hidden');
-            document.getElementById('pin-modal').classList.remove('flex');
-            window.noteToUnlock = null;
-        };
-        window.verifyPinFallback = function() {
-            const input = document.getElementById('pin-input').value;
-            const master = localStorage.getItem('master_pin');
-            if (input === master && window.noteToUnlock) {
-                closePinModal();
-                openNote(window.noteToUnlock);
-            } else {
-                alert("PIN incorrecto.");
-                document.getElementById('pin-input').value = '';
-                document.getElementById('pin-input').focus();
-            }
-        };
-
-        function buildNoteTempDiv(note) {
-            const div = document.createElement('div');
-            div.style.padding = '30px';
-            div.style.fontFamily = 'sans-serif';
-            div.style.color = '#000';
-            if (note.type === 'checklist') {
-                let html = `<h1 style="font-size:24px;margin-bottom:20px;">${note.title || 'Nota'}</h1><ul style="list-style:none;padding:0;font-size:16px;">`;
-                note.items.forEach(i => { html += `<li style="margin-bottom:10px;">${i.checked ? '☑' : '☐'} ${i.text}</li>`; });
-                html += '</ul>';
-                div.innerHTML = html;
-            } else {
-                div.innerHTML = `<h1 style="font-size:24px;margin-bottom:20px;">${note.title || 'Nota'}</h1><div style="font-size:16px;">${note.content}</div>`;
-            }
-            return div;
-        }
-        function pdfOptions(note) {
-            return {
-                margin: 1,
-                filename: `${note.title || 'nota'}.pdf`,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2 },
-                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-            };
-        }
-        function downloadBlob(blob, filename) {
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            a.click();
-            setTimeout(() => URL.revokeObjectURL(url), 1500);
-        }
-
-        window.downloadPDF = function() {
-            const note = notes.find(n => n.id === activeContextMenuNoteId);
-            if (!note) return;
-            const tempDiv = buildNoteTempDiv(note);
-            html2pdf().set(pdfOptions(note)).from(tempDiv).save();
-            hideContextMenu();
-        };
-
-        window.openSendModal = function() {
-            hideContextMenu();
-            document.getElementById('send-modal').classList.remove('hidden');
-            document.getElementById('send-modal').classList.add('flex');
-        };
-        window.closeSendModal = function() {
-            document.getElementById('send-modal').classList.add('hidden');
-            document.getElementById('send-modal').classList.remove('flex');
-        };
-
-        window.shareAsText = function() {
-            const note = notes.find(n => n.id === activeContextMenuNoteId);
-            if (!note) return;
-            let textContent = '';
-            if (note.type === 'checklist') {
-                textContent = `${note.title || 'Lista'}\n\n`;
-                note.items.forEach(i => { textContent += `${i.checked ? '[x]' : '[ ]'} ${i.text}\n`; });
-            } else {
-                textContent = `${note.title || 'Nota'}\n\n${(note.content || '').replace(/<[^>]*>?/gm, '\n').replace(/\n\n+/g, '\n')}`;
-            }
-            if (navigator.share) {
-                navigator.share({ title: note.title || 'Nota', text: textContent })
-                    .then(() => markNoteAsShared(note))
-                    .catch(err => { if (err.name !== 'AbortError') console.error(err); });
-            } else {
-                navigator.clipboard.writeText(textContent)
-                    .then(() => { markNoteAsShared(note); alert('Texto copiado al portapapeles.'); })
-                    .catch(() => alert('No se pudo copiar.'));
-            }
-            closeSendModal();
-        };
-
-        window.shareAsPDF = function() {
-            const note = notes.find(n => n.id === activeContextMenuNoteId);
-            if (!note) return;
-            const tempDiv = buildNoteTempDiv(note);
-            const opt = pdfOptions(note);
-            closeSendModal();
-            html2pdf().set(opt).from(tempDiv).outputPdf('blob').then(pdfBlob => {
-                const filename = `${note.title || 'nota'}.pdf`;
-                const file = new File([pdfBlob], filename, { type: 'application/pdf' });
-                if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    navigator.share({ files: [file], title: note.title || 'Nota' })
-                        .then(() => markNoteAsShared(note))
-                        .catch(err => {
-                            if (err.name !== 'AbortError') downloadBlob(pdfBlob, filename);
-                        });
-                } else {
-                    downloadBlob(pdfBlob, filename);
-                    markNoteAsShared(note);
-                }
-            }).catch(() => { html2pdf().set(opt).from(tempDiv).save(); });
-        };
-
-        window.moveNoteToFolder = function(folderId) {
-            const note = notes.find(n => n.id === activeContextMenuNoteId);
-            if (note) { note.folderId = folderId; saveLocal(); renderNotesList(); }
-            hideContextMenu();
-        };
 
         function hideContextMenu() {
-            const ctx = document.getElementById('note-context-menu');
-            if (ctx && !ctx.classList.contains('hidden')) { ctx.classList.add('hidden'); ctx.classList.remove('flex'); }
-            const f = document.getElementById('folder-submenu');
-            if (f && !f.classList.contains('hidden')) { f.classList.add('hidden'); f.classList.remove('flex'); }
+            const ctxMenu = document.getElementById('note-context-menu');
+            if(ctxMenu && !ctxMenu.classList.contains('hidden')) {
+                ctxMenu.classList.add('hidden');
+                ctxMenu.classList.remove('flex');
+            }
         }
 
-        window.moveToTrash = function() {
-            const note = notes.find(n => n.id === activeContextMenuNoteId);
-            if (note) { note.isTrashed = true; note.trashedAt = Date.now(); saveLocal(); if (currentView === 'notes') renderNotesList(); }
-            hideContextMenu();
-        };
-
+        // Cierre global de menús al tocar fuera
         document.addEventListener('click', (e) => {
-            if (isFanMenuOpen && !e.target.closest('#fab-container')) closeFanMenu();
-            if (isMoreMenuOpen && !e.target.closest('#more-menu')) toggleMoreMenu();
-            if (!e.target.closest('#note-context-menu') && !e.target.closest('#folder-submenu') && !e.target.closest('#send-modal') && !e.target.closest('#pin-modal')) hideContextMenu();
+            if(isFanMenuOpen && !e.target.closest('#fab-container')) closeFanMenu();
+            if(isMoreMenuOpen && !e.target.closest('#more-menu')) toggleMoreMenu();
+            if(!e.target.closest('#note-context-menu')) hideContextMenu();
         });
 
+        // --- Carpetas ---
         function promptCreateFolder() {
             toggleMoreMenu();
             document.getElementById('folder-name-input').value = '';
@@ -767,14 +514,16 @@
             document.getElementById('folder-modal').classList.remove('hidden');
             document.getElementById('folder-modal').classList.add('flex');
         }
+
         function closeFolderModal() {
             document.getElementById('folder-modal').classList.add('hidden');
             document.getElementById('folder-modal').classList.remove('flex');
         }
+
         function selectFolderColor(color) {
             selectedFolderColor = color;
             document.querySelectorAll('.folder-color-btn').forEach(btn => {
-                if (btn.dataset.color === color) {
+                if(btn.dataset.color === color) {
                     btn.classList.replace('ring-transparent', 'ring-gray-400');
                     btn.classList.add('scale-125');
                 } else {
@@ -783,197 +532,134 @@
                 }
             });
         }
+
         function confirmCreateFolder() {
             const name = document.getElementById('folder-name-input').value.trim();
-            if (name) {
-                folders.push({ id: Date.now().toString(), name, color: selectedFolderColor });
+            if(name) {
+                folders.push({ id: Date.now().toString(), name: name, color: selectedFolderColor });
                 saveFoldersLocal();
                 renderSidebarFolders();
                 closeFolderModal();
             }
         }
+
         function renderSidebarFolders() {
             const container = document.getElementById('sidebar-folders');
-            if (!container) return;
+            if(!container) return;
             container.innerHTML = '';
             folders.forEach(folder => {
                 const textClasses = isSidebarOpen ? 'w-auto ml-4 opacity-100' : 'opacity-0 w-0 ml-0';
                 container.innerHTML += `
-                <button onclick="openFolderView('${folder.id}')" class="flex items-center text-gray-800 w-full px-1 py-1 overflow-hidden group">
-                    <i class="ph-fill ph-folder text-3xl shrink-0 transition-transform group-hover:scale-110" style="color: ${folder.color};"></i>
-                    <span class="sidebar-text ${textClasses} font-medium whitespace-nowrap overflow-hidden transition-all duration-200 group-hover:text-black">${folder.name}</span>
+                <button class="flex items-center text-gray-800 w-full px-1 py-1 overflow-hidden group">
+                    <img src="icons/folder-${folder.color.replace('#','').toLowerCase()}.png" alt="" onerror="this.onerror=null;this.src='icons/folder.png'" class="w-8 h-8 object-contain shrink-0 transition-transform group-hover:scale-110">
+                    <span class="sidebar-text ${textClasses} font-medium whitespace-nowrap overflow-hidden transition-all duration-200 group-hover:text-black">${esc(folder.name)}</span>
                 </button>`;
             });
         }
 
-        window.openFolderView = function(folderId) {
-            activeFolderId = folderId;
-            isSharedView = false;
-            resetSearchState();
-            const folder = folders.find(f => f.id === folderId);
-            document.getElementById('main-view-title').innerText = folder ? folder.name : 'Carpeta';
-            navTo('notes');
-        };
-        window.openSharedView = function() {
-            activeFolderId = null;
-            isSharedView = true;
-            resetSearchState();
-            document.getElementById('main-view-title').innerText = 'Notas compartidas';
-            navTo('notes');
-        };
-        window.goToHome = function() {
-            activeFolderId = null;
-            isSharedView = false;
-            resetSearchState();
-            document.getElementById('main-view-title').innerText = 'Todas las notas';
-            navTo('notes');
-        };
-
+        // --- Navegación ---
         function navTo(view) {
-            if (currentNote.id && (currentView === 'editor' || currentView === 'checklist')) saveCurrentNote();
-            ['notes', 'editor', 'checklist', 'calendar', 'trash'].forEach(v => document.getElementById(`view-${v}`).classList.add('hidden'));
+            if(currentNote.id && (currentView === 'editor' || currentView === 'checklist')) {
+                saveCurrentNote();
+            }
+            ['notes', 'editor', 'checklist', 'calendar', 'plant'].forEach(v => document.getElementById(`view-${v}`).classList.add('hidden'));
             document.getElementById(`view-${view}`).classList.remove('hidden');
             currentView = view;
-            if (isSidebarOpen) toggleSidebar();
+            
+            if(isSidebarOpen) toggleSidebar();
             closeFanMenu();
             updateFABState();
-            if (view === 'notes') renderNotesList();
-            if (view === 'trash') renderTrashList();
-            if (view === 'calendar') { renderCalendarGrid(); renderReminders(); }
+
+            if(view === 'plant') renderPlant();
+            if(view === 'notes') renderNotesList();
+            if(view === 'calendar') {
+                renderCalendarGrid();
+                renderReminders();
+            }
         }
 
+        // --- Renderizado de Notas y Eventos (Long Press) ---
         function renderNotesList() {
             const container = document.getElementById('notes-container');
             container.innerHTML = '';
             container.className = isGridView ? 'grid grid-cols-2 gap-4 pb-28 px-1' : 'flex flex-col gap-4 pb-28 px-1';
 
-            const visibleNotes = notes.filter(n => {
-                if (n.type === 'reminder' || n.isTrashed) return false;
-                if (isSharedView) { if (!n.isShared) return false; }
-                else if (activeFolderId) { if (n.folderId !== activeFolderId) return false; }
-                else { if (n.folderId) return false; }
-                if (currentSearchTerm && !(n.title || '').toLowerCase().includes(currentSearchTerm)) return false;
-                return true;
-            }).sort((a, b) => b.updatedAt - a.updatedAt);
+            const matches = n => !searchQuery || ((n.title || '') + ' ' + plain(n.content) + ' ' + (n.items || []).map(i => i.text).join(' ')).toLowerCase().includes(searchQuery);
+            const visibleNotes = notes.filter(n => n.type !== 'reminder' && matches(n))
+                .sort((a,b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || b.updatedAt - a.updatedAt);
 
             if (visibleNotes.length === 0) {
-                if (currentSearchTerm) container.innerHTML = '<p class="text-gray-500 italic text-center w-full mt-10">No se encontraron notas con ese título.</p>';
-                else if (isSharedView) container.innerHTML = '<p class="text-gray-500 italic text-center w-full mt-10">Aún no has compartido ninguna nota.<br><span class="text-xs">Mantén pulsada una nota → Compartir.</span></p>';
-                else if (activeFolderId) container.innerHTML = '<p class="text-gray-500 italic text-center w-full mt-10">No hay notas en esta carpeta.</p>';
+                container.innerHTML = `<div class="${isGridView ? 'col-span-2 ' : ''}text-center text-gray-500 py-16"><img src="icons/note.png" alt="" class="w-10 h-10 object-contain opacity-30 mx-auto mb-2"><p class="text-sm font-medium">${searchQuery ? 'Ninguna nota coincide con tu búsqueda.' : 'Aún no hay notas. Toca el lápiz para crear la primera.'}</p></div>`;
+                return;
             }
-
+            
             visibleNotes.forEach(note => {
                 const card = document.createElement('div');
                 card.className = `bg-white rounded-[20px] p-5 shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-shadow relative ${isGridView ? 'min-h-[160px]' : 'min-h-[120px]'} flex flex-col select-none`;
-
+                
                 let snippet = '';
-                if (note.isPrivate) {
-                    snippet = `<div class="text-[13px] text-gray-400 mt-2 italic flex items-center gap-1"><i class="ph-fill ph-lock-key"></i> Nota protegida</div>`;
-                } else if (note.type === 'checklist') {
+                if(note.type === 'checklist') {
                     const done = note.items.filter(i => i.checked).length;
-                    snippet = `<div class="text-sm text-gray-500 mt-2 flex items-center gap-1"><i class="ph-bold ph-check-square"></i> ${done}/${note.items.length} completados</div>`;
+                    snippet = `<div class="text-sm text-gray-500 mt-2 flex items-center gap-1"><img src="icons/checklist.png" alt="" class="w-4 h-4 object-contain"> ${done}/${note.items.length} completados</div>`;
                 } else {
-                    const cleanText = (note.content || '').replace(/<[^>]*>?/gm, ' ');
+                    const cleanText = esc(plain((note.content || '').replace(/<\/(p|div|tr|br)>|<br\s*\/?>/gi, ' ')));
                     snippet = `<div class="text-[13px] text-gray-700 mt-2 line-clamp-4 leading-relaxed">${cleanText || '...'}</div>`;
                 }
-
+                
                 const d = new Date(note.updatedAt);
-                const dateStr = d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
-                const lockIcon = note.isPrivate ? `<div class="absolute top-4 right-4 bg-gray-50 w-7 h-7 flex items-center justify-center rounded-full shadow-sm border border-gray-100"><i class="ph-fill ph-lock-key text-[#CC1919] text-sm"></i></div>` : '';
-                const sharedIconRight = note.isPrivate ? 'right-12' : 'right-4';
-                const sharedIcon = note.isShared ? `<div class="absolute top-4 ${sharedIconRight} bg-[#3B82F6]/10 w-7 h-7 flex items-center justify-center rounded-full shadow-sm border border-[#3B82F6]/20"><i class="ph-fill ph-users text-[#3B82F6] text-sm"></i></div>` : '';
+                const dateStr = d.toLocaleDateString('es-ES', { day:'2-digit', month:'short' });
 
                 card.innerHTML = `
-                    ${lockIcon}${sharedIcon}
-                    <div class="text-xs text-gray-400 mb-1 font-medium pr-14">${dateStr}</div>
-                    ${note.title ? `<strong class="block text-base text-gray-900 truncate tracking-tight pr-14">${note.title}</strong>` : ''}
+                    <div class="text-xs text-gray-400 mb-1 font-medium flex items-center justify-between">${dateStr}${note.pinned ? '<img src="icons/pin.png" alt="" class="w-4 h-4 object-contain">' : ''}</div>
+                    ${note.title ? `<strong class="block text-base text-gray-900 truncate tracking-tight">${esc(note.title)}</strong>` : ''}
                     ${snippet}
                 `;
-
+                
+                // Lógica de Pulsación Larga (Touch) y Clic Derecho
                 let pressTimer;
-                card.oncontextmenu = (e) => { e.preventDefault(); showContextMenu(note.id, e.clientX, e.clientY); };
-                card.onmousedown = (e) => {
-                    if (e.button !== 0) return;
-                    pressTimer = setTimeout(() => showContextMenu(note.id, e.clientX, e.clientY), 500);
+                let isDragging = false;
+
+                // Ordenador: Clic Derecho
+                card.oncontextmenu = (e) => {
+                    e.preventDefault();
+                    showContextMenu(note.id, e.clientX, e.clientY);
                 };
-                card.onmousemove = () => clearTimeout(pressTimer);
+
+                // Ordenador: Clic mantenido
+                card.onmousedown = (e) => {
+                    if(e.button !== 0) return;
+                    isDragging = false;
+                    pressTimer = setTimeout(() => { showContextMenu(note.id, e.clientX, e.clientY); }, 500);
+                };
+                card.onmousemove = () => { isDragging = true; clearTimeout(pressTimer); };
                 card.onmouseup = () => clearTimeout(pressTimer);
+
+                // Móvil: Pulsación larga (Long press)
                 card.ontouchstart = (e) => {
+                    isDragging = false;
                     pressTimer = setTimeout(() => {
                         showContextMenu(note.id, e.touches[0].clientX, e.touches[0].clientY);
-                        if (navigator.vibrate) navigator.vibrate(50);
+                        if(navigator.vibrate) navigator.vibrate(50);
                     }, 500);
                 };
-                card.ontouchmove = () => clearTimeout(pressTimer);
+                card.ontouchmove = () => { isDragging = true; clearTimeout(pressTimer); };
                 card.ontouchend = () => clearTimeout(pressTimer);
 
-                card.onclick = async () => {
-                    if (blockNoteClick) return;
+                // Apertura normal
+                card.onclick = (e) => {
+                    if (blockNoteClick) return; // Si acaba de abrirse el menú contextual, cancela el clic
                     if (!document.getElementById('note-context-menu').classList.contains('hidden')) return;
-                    if (note.isPrivate) {
-                        let authSuccess = false;
-                        const credId = localStorage.getItem('webauthn_cred');
-                        if (credId && window.PublicKeyCredential) {
-                            try {
-                                const challenge = window.crypto.getRandomValues(new Uint8Array(32));
-                                await navigator.credentials.get({
-                                    publicKey: {
-                                        challenge,
-                                        allowCredentials: [{ type: "public-key", id: base64urlToBuffer(credId) }],
-                                        userVerification: "required",
-                                        timeout: 60000
-                                    }
-                                });
-                                authSuccess = true;
-                            } catch (err) { console.log("Fallo huella:", err); }
-                        }
-                        if (!authSuccess) {
-                            document.getElementById('pin-modal').classList.remove('hidden');
-                            document.getElementById('pin-modal').classList.add('flex');
-                            document.getElementById('pin-input').value = '';
-                            document.getElementById('pin-input').focus();
-                            window.noteToUnlock = note.id;
-                            return;
-                        }
-                    }
                     openNote(note.id);
                 };
+
                 container.appendChild(card);
             });
         }
 
-        function renderTrashList() {
-            const container = document.getElementById('trash-container');
-            container.innerHTML = '';
-            container.className = isGridView ? 'grid grid-cols-2 gap-4 pb-28 px-1' : 'flex flex-col gap-4 pb-28 px-1';
-            const trashed = notes.filter(n => n.isTrashed).sort((a, b) => b.trashedAt - a.trashedAt);
-            if (trashed.length === 0) {
-                container.innerHTML = '<p class="text-gray-500 italic text-center w-full mt-10">La papelera está vacía.</p>';
-                return;
-            }
-            trashed.forEach(note => {
-                const card = document.createElement('div');
-                card.className = `bg-gray-300 rounded-[20px] p-5 shadow-sm border border-gray-200 relative ${isGridView ? 'min-h-[160px]' : 'min-h-[120px]'} flex flex-col select-none opacity-75`;
-                const d = new Date(note.trashedAt);
-                const dateStr = d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
-                card.innerHTML = `
-                    <div class="text-xs text-gray-500 mb-1 font-medium">Borrado el ${dateStr}</div>
-                    <strong class="block text-base text-gray-700 truncate tracking-tight line-through">${note.title || 'Sin título'}</strong>
-                    <button onclick="restoreNote('${note.id}')" class="absolute bottom-4 right-4 bg-white text-gray-700 px-3 py-1.5 rounded-full text-xs font-bold hover:text-black shadow-sm transition-colors">Restaurar</button>
-                `;
-                container.appendChild(card);
-            });
-        }
-
-        window.restoreNote = function(id) {
-            const note = notes.find(n => n.id === id);
-            if (note) { note.isTrashed = false; note.trashedAt = null; saveLocal(); renderTrashList(); }
-        };
-
+        // --- Gestión de Notas (Crear, Abrir, Guardar) ---
         function createNewNote(type) {
-            const defaultFolder = isSharedView ? null : activeFolderId;
-            currentNote = { id: Date.now().toString(), type, title: '', content: '', items: type === 'checklist' ? [{ text: '', checked: false }] : [], background: 'none', updatedAt: Date.now(), isTrashed: false, trashedAt: null, folderId: defaultFolder, isPrivate: false, isShared: false, time: '', notified: false };
-            if (type === 'checklist') {
+            currentNote = { id: Date.now().toString(), type: type, title: '', content: '', items: type === 'checklist' ? [{ text: '', checked: false }] : [], background: 'none', updatedAt: Date.now() };
+            if(type === 'checklist') {
                 document.getElementById('checklist-title').value = '';
                 renderChecklistEditor();
                 navTo('checklist');
@@ -987,9 +673,9 @@
 
         function openNote(id) {
             const n = notes.find(x => x.id === id);
-            if (!n) return;
+            if(!n) return;
             currentNote = JSON.parse(JSON.stringify(n));
-            if (currentNote.type === 'checklist') {
+            if(currentNote.type === 'checklist') {
                 document.getElementById('checklist-title').value = currentNote.title || '';
                 renderChecklistEditor();
                 navTo('checklist');
@@ -1001,37 +687,34 @@
             }
         }
 
-        function saveCurrentNote() {
-            if (!currentNote || !currentNote.id) return;
+        function saveCurrentNote(keepOpen) {
+            if(!currentNote.id) return;
             let hasData = false;
+            
             if (currentNote.type === 'text') {
                 currentNote.title = document.getElementById('editor-title').value.trim();
                 currentNote.content = document.getElementById('editor-content').innerHTML.trim();
-                if (currentNote.title || currentNote.content) hasData = true;
+                if(currentNote.title || currentNote.content) hasData = true;
             } else if (currentNote.type === 'checklist') {
                 currentNote.title = document.getElementById('checklist-title').value.trim();
-                const rows = document.querySelectorAll('.checklist-item-row');
+                const itemDivs = document.querySelectorAll('.checklist-item-row');
                 currentNote.items = [];
-                rows.forEach(div => {
-                    const input = div.querySelector('input[type="text"]').value.trim();
+                itemDivs.forEach(div => {
+                    const input = div.querySelector('input').value.trim();
                     const isChecked = div.dataset.checked === 'true';
-                    if (input) currentNote.items.push({ text: input, checked: isChecked });
+                    if(input) currentNote.items.push({ text: input, checked: isChecked });
                 });
-                if (currentNote.title || currentNote.items.length > 0) hasData = true;
+                if(currentNote.title || currentNote.items.length > 0) hasData = true;
             }
 
             if (hasData) {
                 currentNote.updatedAt = Date.now();
                 const idx = notes.findIndex(n => n.id === currentNote.id);
-                const copy = JSON.parse(JSON.stringify(currentNote));
-                if (idx > -1) notes[idx] = copy;
-                else notes.push(copy);
+                if(idx > -1) notes[idx] = currentNote;
+                else notes.push(currentNote);
                 saveLocal();
-            } else {
-                const idx = notes.findIndex(n => n.id === currentNote.id);
-                if (idx > -1) { notes.splice(idx, 1); saveLocal(); }
             }
-            currentNote = { id: null, type: 'text', title: '', content: '', items: [], background: 'none', isTrashed: false, trashedAt: null, folderId: activeFolderId, isPrivate: false, isShared: false, time: '', notified: false };
+            if (!keepOpen) currentNote.id = null;
         }
 
         function deleteNote(id) {
@@ -1041,30 +724,36 @@
             if (currentView === 'calendar') renderReminders();
         }
 
+        // --- Vista Checklist ---
         function renderChecklistEditor() {
             const container = document.getElementById('checklist-items');
             container.innerHTML = '';
-            if (currentNote.items.length === 0) currentNote.items.push({ text: '', checked: false });
-            currentNote.items.forEach(item => {
+            if(currentNote.items.length === 0) currentNote.items.push({text:'', checked:false});
+            
+            currentNote.items.forEach((item) => {
                 const div = document.createElement('div');
                 div.className = "checklist-item-row bg-white rounded-[24px] p-4 flex items-center gap-4 shadow-sm border border-gray-100";
                 div.dataset.checked = item.checked ? 'true' : 'false';
                 const dot = item.checked ? '<div class="w-3 h-3 bg-[#CC1919] rounded-full"></div>' : '';
+                
                 div.innerHTML = `
                     <button onclick="toggleCheckRow(this)" class="w-7 h-7 rounded-full border-[3px] border-[#1C1C1E] flex items-center justify-center shrink-0 transition-all">${dot}</button>
-                    <input type="text" class="flex-1 outline-none text-gray-800 text-lg font-medium bg-transparent" value="${item.text.replace(/"/g, '&quot;')}" placeholder="...">
-                    <button onclick="deleteCheckRow(this)" class="text-gray-300 hover:text-red-500 shrink-0 px-2 transition-colors"><i class="ph-fill ph-x text-xl"></i></button>
+                    <input type="text" class="flex-1 outline-none text-gray-800 text-lg font-medium bg-transparent" value="${esc(item.text)}" placeholder="...">
+                    <button onclick="deleteCheckRow(this)" class="text-gray-300 hover:text-red-500 shrink-0 px-2 transition-colors"><img src="icons/close.png" alt="" class="w-5 h-5 object-contain opacity-40 hover:opacity-100 transition-opacity"></button>
                 `;
                 container.appendChild(div);
             });
         }
+
         window.toggleCheckRow = function(btn) {
             const row = btn.closest('.checklist-item-row');
             const isChecked = row.dataset.checked === 'true';
             row.dataset.checked = !isChecked;
             btn.innerHTML = !isChecked ? '<div class="w-3 h-3 bg-[#CC1919] rounded-full"></div>' : '';
-        };
-        window.deleteCheckRow = function(btn) { btn.closest('.checklist-item-row').remove(); };
+        }
+
+        window.deleteCheckRow = function(btn) { btn.closest('.checklist-item-row').remove(); }
+
         window.addChecklistItem = function() {
             const container = document.getElementById('checklist-items');
             const div = document.createElement('div');
@@ -1073,28 +762,32 @@
             div.innerHTML = `
                 <button onclick="toggleCheckRow(this)" class="w-7 h-7 rounded-full border-[3px] border-[#1C1C1E] flex items-center justify-center shrink-0 transition-all"></button>
                 <input type="text" class="flex-1 outline-none text-gray-800 text-lg font-medium bg-transparent" placeholder="...">
-                <button onclick="deleteCheckRow(this)" class="text-gray-300 hover:text-red-500 shrink-0 px-2 transition-colors"><i class="ph-fill ph-x text-xl"></i></button>
+                <button onclick="deleteCheckRow(this)" class="text-gray-300 hover:text-red-500 shrink-0 px-2 transition-colors"><img src="icons/close.png" alt="" class="w-5 h-5 object-contain opacity-40 hover:opacity-100 transition-opacity"></button>
             `;
             container.appendChild(div);
             div.querySelector('input').focus();
-        };
+        }
 
+        // --- Vista Editor Texto (Fondos) ---
         function cycleBackground() {
             const bgs = ['none', 'lined', 'grid', 'dotted'];
             let idx = bgs.indexOf(currentNote.background);
             currentNote.background = bgs[(idx + 1) % bgs.length];
             applyEditorBackground();
         }
+
         function applyEditorBackground() {
             const ed = document.getElementById('editor-content');
-            ed.className = 'flex-1 w-full outline-none p-6 text-gray-800 leading-loose rounded-b-2xl transition-all duration-300 overflow-y-auto pb-32';
+            ed.className = 'flex-1 w-full outline-none p-6 text-gray-800 leading-loose rounded-b-2xl transition-all duration-300 min-h-[50vh]';
             if (currentNote.background === 'lined') ed.classList.add('bg-lined');
             else if (currentNote.background === 'grid') ed.classList.add('bg-grid');
             else if (currentNote.background === 'dotted') ed.classList.add('bg-dotted');
             else ed.classList.add('bg-white');
         }
 
-        let tableRows = 2, tableCols = 2;
+        // --- Tablas Interactivas (+ Filas/Columnas) ---
+        let tableRows = 2; let tableCols = 2;
+
         function openTableModal() {
             closeFanMenu();
             document.getElementById('table-modal').classList.remove('hidden');
@@ -1112,12 +805,12 @@
         }
         function insertTable() {
             closeTableModal();
-            if (currentView !== 'editor') createNewNote('text');
+            if(currentView !== 'editor') createNewNote('text');
             document.getElementById('editor-content').focus();
             let html = `<div contenteditable="false" class="relative inline-block w-full my-6 pr-8 pb-8 group"><div class="overflow-x-auto w-full rounded-lg shadow-sm border border-gray-200 bg-white" contenteditable="true"><table class="w-full border-collapse table-fixed min-w-max"><tbody>`;
-            for (let i = 0; i < tableRows; i++) {
+            for(let i=0; i<tableRows; i++) {
                 html += '<tr>';
-                for (let j = 0; j < tableCols; j++) html += `<td class="border border-gray-300 p-3 min-w-[100px] outline-none hover:bg-gray-50"><br></td>`;
+                for(let j=0; j<tableCols; j++) html += `<td class="border border-gray-300 p-3 min-w-[100px] outline-none hover:bg-gray-50"><br></td>`;
                 html += '</tr>';
             }
             html += `</tbody></table></div><button contenteditable="false" onclick="window.addTableCol(this)" class="absolute top-1/2 right-0 -translate-y-1/2 w-6 h-6 bg-[#CC1919] text-white rounded-full flex items-center justify-center font-bold shadow-md opacity-50 hover:opacity-100 transition-opacity z-10">+</button><button contenteditable="false" onclick="window.addTableRow(this)" class="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-6 bg-[#CC1919] text-white rounded-full flex items-center justify-center font-bold shadow-md opacity-50 hover:opacity-100 transition-opacity z-10">+</button></div><p><br></p>`;
@@ -1135,7 +828,7 @@
             const table = btn.parentElement.querySelector('table');
             const cols = table.querySelector('tr').children.length;
             const tr = document.createElement('tr');
-            for (let i = 0; i < cols; i++) {
+            for(let i=0; i<cols; i++) {
                 const td = document.createElement('td');
                 td.className = 'border border-gray-300 p-3 min-w-[100px] outline-none hover:bg-gray-50';
                 td.innerHTML = '<br>';
@@ -1144,32 +837,39 @@
             table.querySelector('tbody').appendChild(tr);
         };
 
+        // --- Lógica del Menú Abanico (Fan Menu) ---
         function updateFABState() {
             const mainFab = document.getElementById('main-fab');
             const calFab = document.getElementById('cal-add-fab');
             const fanMenu = document.getElementById('fan-menu');
             const icon = document.getElementById('main-fab-icon');
+            if (currentView === 'plant') {
+                mainFab.classList.add('hidden');
+                fanMenu.classList.add('hidden');
+                calFab.classList.add('hidden');
+                return;
+            }
+            
             if (currentView === 'calendar') {
                 mainFab.classList.add('hidden');
                 fanMenu.classList.add('hidden');
                 calFab.classList.remove('hidden');
-            } else if (currentView === 'trash') {
-                mainFab.classList.add('hidden');
-                fanMenu.classList.add('hidden');
-                calFab.classList.add('hidden');
             } else {
                 mainFab.classList.remove('hidden');
                 fanMenu.classList.remove('hidden');
                 calFab.classList.add('hidden');
-                icon.className = currentView === 'notes' ? 'ph-bold ph-pencil-simple text-3xl text-white' : 'ph-bold ph-check text-3xl text-white';
+                const isNotes = currentView === 'notes';
+                icon.className = 'w-8 h-8 object-contain' + (isNotes ? ' hidden' : '');
+                document.getElementById('main-fab-pencil').classList.toggle('hidden', !isNotes);
             }
         }
 
         function handleFabClick(e) {
             e.stopPropagation();
             if (currentView === 'notes') toggleFanMenu();
-            else navTo('notes');
+            else navTo('notes'); 
         }
+
         function toggleFanMenu() {
             isFanMenuOpen = !isFanMenuOpen;
             const fan = document.getElementById('fan-menu');
@@ -1181,6 +881,7 @@
                 fan.classList.remove('scale-100', 'opacity-100', 'pointer-events-auto');
             }
         }
+
         function closeFanMenu() {
             isFanMenuOpen = false;
             const fan = document.getElementById('fan-menu');
@@ -1188,32 +889,36 @@
             fan.classList.remove('scale-100', 'opacity-100', 'pointer-events-auto');
         }
 
-        const monthNames = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
-        function getFormatDateStr(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+        // --- Calendario e Interactividad (Octubre 2026) ---
+        const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+
+        function getFormatDateStr(dateObj) {
+            return `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
+        }
 
         function renderCalendarGrid() {
             document.getElementById('cal-month-year').innerText = `${monthNames[calDate.getMonth()]} ${calDate.getFullYear()}`;
             const grid = document.getElementById('cal-grid');
             grid.innerHTML = '';
-            const year = calDate.getFullYear(), month = calDate.getMonth();
+
+            const year = calDate.getFullYear();
+            const month = calDate.getMonth();
             const firstDay = new Date(year, month, 1).getDay();
-            const startOffset = firstDay === 0 ? 6 : firstDay - 1;
+            const startOffset = firstDay === 0 ? 6 : firstDay - 1; 
             const daysInMonth = new Date(year, month + 1, 0).getDate();
-            const daysInPrev = new Date(year, month, 0).getDate();
-            for (let i = 0; i < startOffset; i++) grid.innerHTML += `<div class="text-gray-400 py-1 flex justify-center items-center h-10">${daysInPrev - startOffset + i + 1}</div>`;
+            const daysInPrevMonth = new Date(year, month, 0).getDate();
+            const remDays = new Set(notes.filter(n => n.type === 'reminder').map(n => n.date));
+
+            for (let i = 0; i < startOffset; i++) grid.innerHTML += `<div class="text-gray-400 py-1">${daysInPrevMonth - startOffset + i + 1}</div>`;
             for (let i = 1; i <= daysInMonth; i++) {
-                const checkDateStr = getFormatDateStr(new Date(year, month, i));
-                const hasReminder = notes.some(n => n.type === 'reminder' && n.date === checkDateStr && !n.isTrashed);
-                const isSelected = (year === selectedDate.getFullYear() && month === selectedDate.getMonth() && i === selectedDate.getDate());
-                const dot = hasReminder ? `<div class="absolute bottom-0 w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-[#CC1919]'}"></div>` : '';
-                if (isSelected) {
-                    grid.innerHTML += `<div class="relative flex flex-col justify-center items-center cursor-pointer h-10" onclick="selectDate(${year},${month},${i})"><div class="bg-[#CC1919] text-white rounded w-7 h-7 flex items-center justify-center font-bold shadow-sm">${i}</div>${dot}</div>`;
+                if (year === selectedDate.getFullYear() && month === selectedDate.getMonth() && i === selectedDate.getDate()) {
+                    grid.innerHTML += `<div class="relative flex justify-center items-center cursor-pointer" onclick="selectDate(${year}, ${month}, ${i})"><div class="bg-[#CC1919] text-white rounded w-7 h-7 flex items-center justify-center font-bold shadow-sm">${i}</div></div>`;
                 } else {
-                    grid.innerHTML += `<div class="relative flex flex-col justify-center items-center text-gray-700 cursor-pointer hover:bg-gray-200 rounded transition-colors h-10" onclick="selectDate(${year},${month},${i})"><div class="w-7 h-7 flex items-center justify-center">${i}</div>${dot}</div>`;
+                    grid.innerHTML += `<div class="relative text-gray-700 py-1 cursor-pointer hover:bg-gray-200 rounded transition-colors" onclick="selectDate(${year}, ${month}, ${i})">${i}${remDays.has(getFormatDateStr(new Date(year, month, i))) ? '<span class="absolute left-1/2 -translate-x-1/2 bottom-0 w-1 h-1 rounded-full bg-[#CC1919]"></span>' : ''}</div>`;
                 }
             }
             const remaining = 42 - (startOffset + daysInMonth);
-            for (let i = 1; i <= remaining; i++) grid.innerHTML += `<div class="text-gray-400 py-1 flex justify-center items-center h-10">${i}</div>`;
+            for(let i=1; i<=remaining; i++) grid.innerHTML += `<div class="text-gray-400 py-1">${i}</div>`;
         }
 
         window.selectDate = function(y, m, d) {
@@ -1221,35 +926,39 @@
             renderCalendarGrid();
             renderReminders();
         };
-        function changeMonth(delta) { calDate.setMonth(calDate.getMonth() + delta); renderCalendarGrid(); }
+
+        function changeMonth(delta) {
+            calDate.setMonth(calDate.getMonth() + delta);
+            renderCalendarGrid();
+        }
+
         function initCalendarSwipe() {
-            const zone = document.getElementById('calendar-swipe-zone');
-            let startX = 0;
-            zone.addEventListener('touchstart', e => startX = e.changedTouches[0].screenX, { passive: true });
-            zone.addEventListener('touchend', e => {
-                const endX = e.changedTouches[0].screenX;
-                if (startX - endX > 50) changeMonth(1);
-                else if (endX - startX > 50) changeMonth(-1);
-            }, { passive: true });
+            const calView = document.getElementById('calendar-swipe-zone');
+            let touchStartX = 0;
+            calView.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, {passive: true});
+            calView.addEventListener('touchend', e => {
+                let touchEndX = e.changedTouches[0].screenX;
+                if (touchStartX - touchEndX > 50) changeMonth(1);
+                else if (touchEndX - touchStartX > 50) changeMonth(-1);
+            }, {passive: true});
         }
 
         function renderReminders() {
             const container = document.getElementById('cal-reminders');
             container.innerHTML = '';
-            const dayReminders = notes.filter(n => n.type === 'reminder' && n.date === getFormatDateStr(selectedDate)).sort((a, b) => a.updatedAt - b.updatedAt);
+            
+            const dayReminders = notes.filter(n => n.type === 'reminder' && n.date === getFormatDateStr(selectedDate)).sort((a,b) => a.updatedAt - b.updatedAt);
             let html = `<h3 class="text-gray-800 text-sm font-semibold mb-2 ml-1 mt-2">${selectedDate.getDate()} de ${monthNames[selectedDate.getMonth()]} - Recordatorios</h3>`;
+            
             if (dayReminders.length === 0) {
-                html += `<div class="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center text-gray-400 min-h-[100px]"><i class="ph-fill ph-bell-slash text-3xl mb-2 text-gray-300"></i><p class="text-sm font-medium">No hay recordatorios.</p></div>`;
+                html += `<div class="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center text-gray-400 min-h-[100px]"><img src="icons/bell-off.png" alt="" class="w-8 h-8 object-contain opacity-30 mb-2"><p class="text-sm font-medium">No hay recordatorios.</p></div>`;
             } else {
                 dayReminders.forEach(rem => {
                     html += `
                     <div class="bg-white rounded-[20px] p-4 shadow-sm border border-gray-100 flex gap-3 relative group items-start transition-shadow hover:shadow-md">
                         <div class="w-3 h-3 rounded-full bg-[#CC1919] mt-1.5 shrink-0 shadow-sm shadow-red-900/20"></div>
-                        <div class="flex-1 flex flex-col gap-2">
-                            <div contenteditable="true" onblur="updateReminder('${rem.id}', this.innerText, null)" class="outline-none min-h-[1.5rem] text-gray-800 font-medium whitespace-pre-wrap">${rem.content}</div>
-                            <input type="time" value="${rem.time || ''}" onchange="updateReminder('${rem.id}', null, this.value)" class="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded px-2 py-1 w-24 outline-none">
-                        </div>
-                        <button onclick="deleteNote('${rem.id}')" class="text-gray-300 hover:text-[#CC1919] shrink-0 transition-colors ml-2"><i class="ph-fill ph-x text-xl"></i></button>
+                        <div contenteditable="true" onblur="updateReminder('${rem.id}', this.innerText)" class="flex-1 outline-none min-h-[1.5rem] text-gray-800 font-medium whitespace-pre-wrap">${esc(rem.content)}</div>
+                        <button onclick="deleteNote('${rem.id}')" class="text-gray-300 hover:text-[#CC1919] shrink-0 transition-colors ml-2"><img src="icons/close.png" alt="" class="w-5 h-5 object-contain opacity-40 hover:opacity-100 transition-opacity"></button>
                     </div>`;
                 });
             }
@@ -1257,72 +966,180 @@
         }
 
         window.addReminder = function() {
-            if ("Notification" in window && Notification.permission === "default") Notification.requestPermission();
-            notes.push({ id: Date.now().toString(), type: 'reminder', date: getFormatDateStr(selectedDate), time: '', content: '', updatedAt: Date.now(), notified: false });
+            notes.push({ id: Date.now().toString(), type: 'reminder', date: getFormatDateStr(selectedDate), content: '', updatedAt: Date.now() });
             saveLocal();
             renderReminders();
-            renderCalendarGrid();
             setTimeout(() => {
                 const editables = document.getElementById('cal-reminders').querySelectorAll('[contenteditable="true"]');
-                if (editables.length > 0) editables[editables.length - 1].focus();
+                if(editables.length > 0) editables[editables.length - 1].focus();
             }, 50);
         };
 
-        window.updateReminder = function(id, content, time) {
+        window.updateReminder = function(id, content) {
             const note = notes.find(n => n.id === id);
-            if (note) {
-                if (content !== null) {
-                    if (content.trim() === '') { deleteNote(id); return; }
-                    note.content = content.trim();
-                }
-                if (time !== null) {
-                    note.time = time;
-                    note.notified = false;
-                    if (time && "Notification" in window && Notification.permission === "default") Notification.requestPermission();
-                }
-                note.updatedAt = Date.now();
-                saveLocal();
-                renderCalendarGrid();
+            if(note) {
+                if(content.trim() === '') deleteNote(id);
+                else { note.content = content.trim(); note.updatedAt = Date.now(); saveLocal(); }
             }
         };
 
-        window.openSettings = function() {
-            document.getElementById('settings-modal').classList.remove('hidden');
-            document.getElementById('settings-modal').classList.add('flex');
-            updatePersistenceStatus();
-        };
-        window.closeSettings = function() {
-            document.getElementById('settings-modal').classList.add('hidden');
-            document.getElementById('settings-modal').classList.remove('flex');
-        };
-        window.exportBackup = function() {
-            const data = { notes, folders, version: 3, exportedAt: Date.now() };
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-            downloadBlob(blob, `misnotas-${new Date().toISOString().slice(0, 10)}.json`);
-        };
-        window.importBackup = function(file) {
-            if (!file) return;
-            if (!confirm('¿Reemplazar TODAS las notas actuales con la copia? Esta acción no se puede deshacer.')) return;
-            const reader = new FileReader();
-            reader.onload = () => {
-                try {
-                    const data = JSON.parse(reader.result);
-                    if (Array.isArray(data.notes)) { notes = data.notes; saveLocal(); }
-                    if (Array.isArray(data.folders)) { folders = data.folders; saveFoldersLocal(); }
-                    alert('Copia importada. La app se recargará.');
-                    location.reload();
-                } catch (e) { alert('Archivo inválido.'); }
-            };
-            reader.readAsText(file);
+        // --- Acciones del menú contextual y búsqueda ---
+        window.ctxAction = function(a) {
+            const id = ctxNoteId;
+            hideContextMenu();
+            const n = notes.find(x => x.id === id);
+            if (!n) return;
+            if (a === 'pin') n.pinned = !n.pinned;
+            else if (a === 'dup') notes.push({ ...JSON.parse(JSON.stringify(n)), id: Date.now().toString(), title: n.title ? n.title + ' (copia)' : '', pinned: false, updatedAt: Date.now() });
+            else if (a === 'del') { if (!confirm('¿Eliminar esta nota?')) return; notes = notes.filter(x => x.id !== id); }
+            saveLocal();
+            renderNotesList();
         };
 
-        window.onload = initApp;
-    </script>
-
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js').catch(console.error);
+        function toggleSearch() {
+            const bar = document.getElementById('search-bar');
+            const input = document.getElementById('search-input');
+            bar.classList.toggle('hidden');
+            if (bar.classList.contains('hidden')) { input.value = ''; searchQuery = ''; renderNotesList(); }
+            else input.focus();
         }
+
+        // --- Planta: cada hora de estudio = 1 riego ---
+        const HOUR = 3600000;
+        const PLANT_KEY = 'figma_plant_v1';
+        const STAGES = [
+            { name: 'Semilla', at: 0 }, { name: 'Brote', at: 1 }, { name: 'Plántula', at: 3 },
+            { name: 'Planta joven', at: 6 }, { name: 'Planta con flor', at: 12 }, { name: 'Planta frondosa', at: 24 }
+        ];
+        let plant = { pendingMs: 0, watered: 0, startTs: null, lastWater: null, log: {} };
+
+        function loadPlant() { try { Object.assign(plant, JSON.parse(localStorage.getItem(PLANT_KEY)) || {}); } catch (e) {} }
+        function savePlant() { try { localStorage.setItem(PLANT_KEY, JSON.stringify(plant)); } catch (e) {} }
+        function liveMs() { return plant.startTs ? Date.now() - plant.startTs : 0; }
+
+        // Pasa el tiempo en curso al acumulado y al registro del día
+        function bankStudy() {
+            if (!plant.startTs) return;
+            const now = Date.now(), ms = now - plant.startTs, k = getFormatDateStr(new Date());
+            plant.pendingMs += ms;
+            plant.log[k] = (plant.log[k] || 0) + ms;
+            plant.startTs = now;
+        }
+
+        function togglePlantTimer() {
+            if (plant.startTs) { bankStudy(); plant.startTs = null; }
+            else plant.startTs = Date.now();
+            savePlant();
+            renderPlantTimer();
+        }
+
+        function fmtClock(ms) {
+            const t = Math.floor(ms / 1000);
+            return [Math.floor(t / 3600), Math.floor(t / 60) % 60, t % 60].map(v => String(v).padStart(2, '0')).join(':');
+        }
+        function fmtMin(ms) {
+            const m = Math.floor(ms / 60000);
+            return m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m} min`;
+        }
+
+        window.waterPlant = function() {
+            bankStudy();
+            if (plant.pendingMs < HOUR) return;
+            plant.pendingMs -= HOUR;
+            plant.watered++;
+            plant.lastWater = Date.now();
+            savePlant();
+            const art = document.getElementById('plant-art');
+            for (let i = 0; i < 4; i++) {
+                const d = document.createElement('img');
+                d.src = 'icons/drop.png';
+                d.className = 'w-6 h-6 drop-fx';
+                d.style.left = (30 + i * 28) + '%';
+                d.style.animationDelay = (i * 0.12) + 's';
+                art.appendChild(d);
+                setTimeout(() => d.remove(), 1400);
+            }
+            setTimeout(renderPlant, 700);
+            renderPlantTimer();
+        };
+
+        function flowerSVG(cx, cy, r) {
+            let f = '';
+            for (let a = 0; a < 6; a++) {
+                const x = cx + Math.cos(a * Math.PI / 3) * r * 0.9, y = cy + Math.sin(a * Math.PI / 3) * r * 0.9;
+                f += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(r * 0.7).toFixed(1)}" fill="#CC1919"/>`;
+            }
+            return f + `<circle cx="${cx}" cy="${cy}" r="${(r * 0.55).toFixed(1)}" fill="#F5C542"/>`;
+        }
+
+        function plantSVG(stage, wilt) {
+            const g = wilt ? '#8E9A6B' : '#3E9B54', g2 = wilt ? '#A3AE80' : '#5BBF72';
+            const H = [0, 24, 48, 72, 92, 108][stage];
+            let p = '';
+            if (stage === 0) p += '<ellipse cx="100" cy="158" rx="8" ry="5" fill="#8B5E3C"/>';
+            else {
+                p += `<line x1="100" y1="162" x2="100" y2="${160 - H}" stroke="${g}" stroke-width="5" stroke-linecap="round"/>`;
+                const n = stage * 2;
+                for (let k = 0; k < n; k++) {
+                    const side = k % 2 ? 1 : -1, y = 156 - H * (0.15 + 0.8 * k / Math.max(1, n - 1)), cx = 100 + side * 14;
+                    p += `<ellipse cx="${cx}" cy="${y.toFixed(1)}" rx="14" ry="6" transform="rotate(${side * (wilt ? 38 : -25)} ${cx} ${y.toFixed(1)})" fill="${k % 3 ? g2 : g}"/>`;
+                }
+                if (stage < 4) p += `<ellipse cx="100" cy="${160 - H - 6}" rx="5" ry="10" fill="${g2}"/>`;
+                if (stage >= 4) p += flowerSVG(100, 160 - H - 4, 11);
+                if (stage === 5) {
+                    p += `<path d="M100 ${160 - H * 0.55} Q80 ${160 - H * 0.65} 68 ${160 - H * 0.82}" stroke="${g}" stroke-width="4" fill="none" stroke-linecap="round"/>`;
+                    p += `<path d="M100 ${160 - H * 0.45} Q120 ${160 - H * 0.6} 132 ${160 - H * 0.78}" stroke="${g}" stroke-width="4" fill="none" stroke-linecap="round"/>`;
+                    p += flowerSVG(68, 160 - H * 0.82 - 3, 8) + flowerSVG(132, 160 - H * 0.78 - 3, 8);
+                }
+            }
+            const body = wilt ? `<g transform="rotate(16 100 160)">${p}</g>` : `<g class="plant-sway">${p}</g>`;
+            return `<svg viewBox="0 0 200 220" class="w-full h-full" role="img" aria-label="Planta: ${STAGES[stage].name}">
+                ${body}
+                <path d="M58 166 H142 L134 208 Q133 212 128 212 H72 Q67 212 66 208 Z" fill="#DD6B66"/>
+                <rect x="52" y="152" width="96" height="18" rx="6" fill="#CC5A55"/>
+                <ellipse cx="100" cy="153" rx="42" ry="3.5" fill="#5A3D2B"/>
+            </svg>`;
+        }
+
+        function isWilted() { return plant.watered > 0 && plant.lastWater && (Date.now() - plant.lastWater > 72 * HOUR); }
+
+        function renderPlant() {
+            let stage = 0;
+            STAGES.forEach((st, i) => { if (plant.watered >= st.at) stage = i; });
+            const wilt = isWilted(), next = STAGES[stage + 1];
+            const art = document.getElementById('plant-art');
+            art.querySelectorAll('svg').forEach(el => el.remove());
+            art.insertAdjacentHTML('afterbegin', plantSVG(stage, wilt));
+            document.getElementById('plant-stage').textContent = STAGES[stage].name;
+            document.getElementById('plant-status').textContent = wilt
+                ? 'Lleva días sin agua. Estudia una hora y riégala.'
+                : plant.watered === 0 ? 'Estudia una hora para el primer riego.' : `${plant.watered} ${plant.watered === 1 ? 'riego' : 'riegos'} en total`;
+            const pct = next ? (plant.watered - STAGES[stage].at) / (next.at - STAGES[stage].at) * 100 : 100;
+            document.getElementById('plant-bar').style.width = pct + '%';
+            document.getElementById('plant-next').textContent = next
+                ? `${next.at - plant.watered} ${next.at - plant.watered === 1 ? 'riego' : 'riegos'} para ser ${next.name.toLowerCase()}`
+                : 'Tu planta ha crecido al máximo';
+            renderPlantTimer();
+        }
+
+        function renderPlantTimer() {
+            const total = plant.pendingMs + liveMs();
+            const avail = Math.floor(total / HOUR);
+            const today = (plant.log[getFormatDateStr(new Date())] || 0) + liveMs();
+            document.getElementById('plant-timer').textContent = fmtClock(liveMs());
+            document.getElementById('plant-today').textContent = fmtMin(today);
+            const tg = document.getElementById('plant-toggle-icon'), want = plant.startTs ? 'icons/pause.png' : 'icons/play.png';
+            if (!tg.src.endsWith(want)) tg.src = want;
+            const btn = document.getElementById('plant-water');
+            btn.disabled = avail < 1;
+            btn.classList.toggle('opacity-40', avail < 1);
+            document.getElementById('plant-water-label').textContent = avail >= 1
+                ? `Regar (${avail} ${avail === 1 ? 'disponible' : 'disponibles'})`
+                : `Faltan ${Math.ceil((HOUR - total % HOUR) / 60000)} min para el próximo riego`;
+        }
+
+        // Arranque
+        window.onload = initApp;
     </script>
 </body>
 </html>
