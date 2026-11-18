@@ -103,22 +103,22 @@
 
         <nav class="flex flex-col gap-6 w-full items-start px-3">
             <button onclick="navTo('notes')" class="flex items-center text-gray-800 hover:text-black w-full px-1 py-1 overflow-hidden group">
-                <img src="icons/home.png" alt="" class="w-8 h-8 object-contain shrink-0 transition-transform group-hover:scale-110">
+                <img src="home.png" alt="" class="w-8 h-8 object-contain shrink-0 transition-transform group-hover:scale-110">
                 <span class="sidebar-text opacity-0 w-0 ml-0 group-hover:text-black font-medium whitespace-nowrap overflow-hidden">Todas las notas</span>
             </button>
 
             <button class="flex items-center text-gray-800 w-full px-1 py-1 overflow-hidden">
-                <img src="icons/shared.png" alt="" class="w-8 h-8 object-contain shrink-0 transition-transform group-hover:scale-110">
+                <img src="shared.png" alt="" class="w-8 h-8 object-contain shrink-0 transition-transform group-hover:scale-110">
                 <span class="sidebar-text opacity-0 w-0 ml-0 font-medium whitespace-nowrap overflow-hidden">Notas compartidas</span>
             </button>
 
             <button onclick="navTo('calendar')" class="flex items-center text-gray-800 hover:text-black w-full px-1 py-1 overflow-hidden">
-                <img src="icons/calendar.png" alt="" class="w-8 h-8 object-contain shrink-0 transition-transform group-hover:scale-110">
+                <img src="calendar.png" alt="" class="w-8 h-8 object-contain shrink-0 transition-transform group-hover:scale-110">
                 <span class="sidebar-text opacity-0 w-0 ml-0 font-medium whitespace-nowrap overflow-hidden">Calendario</span>
             </button>
 
             <button onclick="navTo('plant')" class="flex items-center text-gray-800 hover:text-black w-full px-1 py-1 overflow-hidden">
-                <img src="icons/plant.png" alt="" class="w-8 h-8 object-contain shrink-0">
+                <img src="plant.png" alt="" class="w-8 h-8 object-contain shrink-0">
                 <span class="sidebar-text opacity-0 w-0 ml-0 font-medium whitespace-nowrap overflow-hidden">Mi planta</span>
             </button>
 
@@ -130,14 +130,14 @@
             <div class="w-8 h-[1px] bg-gray-400 my-1 mx-2 shrink-0"></div>
 
             <button class="flex items-center text-gray-800 w-full px-1 py-1 overflow-hidden">
-                <img src="icons/trash.png" alt="" class="w-8 h-8 object-contain shrink-0 transition-transform group-hover:scale-110">
+                <img src="trash.png" alt="" class="w-8 h-8 object-contain shrink-0 transition-transform group-hover:scale-110">
                 <span class="sidebar-text opacity-0 w-0 ml-0 font-medium whitespace-nowrap overflow-hidden">Papelera</span>
             </button>
         </nav>
 
         <div class="mt-auto w-full px-3">
             <button class="flex items-center text-gray-800 w-full px-1 py-1 overflow-hidden">
-                <img src="icons/settings.png" alt="" class="w-8 h-8 object-contain shrink-0 transition-transform group-hover:scale-110">
+                <img src="settings.png" alt="" class="w-8 h-8 object-contain shrink-0 transition-transform group-hover:scale-110">
                 <span class="sidebar-text opacity-0 w-0 ml-0 font-medium whitespace-nowrap overflow-hidden">Ajustes</span>
             </button>
         </div>
@@ -154,13 +154,13 @@
                     <div class="absolute -bottom-2 left-0 w-full h-[2px] bg-black"></div>
                 </div>
                 <div class="flex items-center gap-3 text-gray-700">
-                    <button onclick="toggleSearch()" aria-label="Buscar" class="hover:text-black"><img src="icons/search.png" alt="" class="w-6 h-6 object-contain"></button>
-                    <button onclick="toggleGridView()" class="hover:text-black"><img id="grid-toggle-icon" src="icons/view.png" alt="" class="w-6 h-6 object-contain"><img id="grid-toggle-list" src="icons/list.png" alt="" class="w-6 h-6 object-contain hidden"></button>
+                    <button onclick="toggleSearch()" aria-label="Buscar" class="hover:text-black"><img src="search.png" alt="" class="w-6 h-6 object-contain"></button>
+                    <button onclick="toggleGridView()" class="hover:text-black"><img id="grid-toggle-icon" src="view.png" alt="" class="w-6 h-6 object-contain"><img id="grid-toggle-list" src="list.png" alt="" class="w-6 h-6 object-contain hidden"></button>
                     <div class="relative">
-                        <button onclick="toggleMoreMenu(event)" class="hover:text-black"><img src="icons/options.png" alt="" class="h-7 w-auto object-contain"></button>
+                        <button onclick="toggleMoreMenu(event)" class="hover:text-black"><img src="options.png" alt="" class="h-7 w-auto object-contain"></button>
                         <div id="more-menu" class="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 hidden z-50 flex flex-col py-2">
                             <button onclick="promptCreateFolder()" class="px-4 py-2 text-left text-gray-800 hover:bg-gray-50 flex items-center gap-2 font-medium">
-                                <img src="icons/folder-plus.png" alt="" class="w-5 h-5 object-contain"> Crear carpeta
+                                <img src="folder-plus.png" alt="" class="w-5 h-5 object-contain"> Crear carpeta
                             </button>
                         </div>
                     </div>
@@ -176,14 +176,14 @@
         <div id="view-editor" class="h-full flex flex-col p-4 md:p-6 max-w-4xl mx-auto hidden">
             <header class="flex items-center justify-between mb-4 gap-4">
                 <button onclick="navTo('notes')" class="text-gray-800 hover:bg-black/5 p-2 rounded-lg font-medium flex items-center gap-1">
-                    <img src="icons/back.png" alt="" class="w-6 h-6 object-contain">
+                    <img src="back.png" alt="" class="w-6 h-6 object-contain">
                 </button>
                 <div class="flex-1 flex justify-center">
                     <input type="text" id="editor-title" placeholder="Título" class="bg-white rounded-full px-6 py-2 w-full max-w-sm text-center font-medium shadow-sm outline-none border border-gray-100 focus:ring-2 ring-gray-200">
                 </div>
                 <div class="flex items-center gap-2">
-                    <button onclick="cycleBackground()" class="text-gray-600 hover:text-black p-2 bg-black/5 rounded-full"><img src="icons/wand.png" alt="" class="w-5 h-5 object-contain"></button>
-                    <button class="text-gray-800 hover:text-black p-2"><img src="icons/options.png" alt="" class="h-7 w-auto object-contain"></button>
+                    <button onclick="cycleBackground()" class="text-gray-600 hover:text-black p-2 bg-black/5 rounded-full"><img src="wand.png" alt="" class="w-5 h-5 object-contain"></button>
+                    <button class="text-gray-800 hover:text-black p-2"><img src="options.png" alt="" class="h-7 w-auto object-contain"></button>
                 </div>
             </header>
             <div class="flex-1 flex flex-col bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden relative pb-16">
@@ -195,19 +195,19 @@
         <div id="view-checklist" class="hidden h-full flex flex-col p-4 md:p-6 max-w-4xl mx-auto">
             <header class="flex items-center justify-between mb-8 gap-4">
                 <button onclick="navTo('notes')" class="text-gray-800 hover:bg-black/5 p-2 rounded-lg font-medium flex items-center gap-1">
-                    <img src="icons/back.png" alt="" class="w-6 h-6 object-contain">
+                    <img src="back.png" alt="" class="w-6 h-6 object-contain">
                 </button>
                 <div class="flex-1 flex justify-center">
                     <input type="text" id="checklist-title" placeholder="Título" class="bg-white rounded-full px-6 py-2 w-full max-w-sm text-center font-medium shadow-sm outline-none border border-gray-100">
                 </div>
-                <button class="text-gray-800 p-2"><img src="icons/options.png" alt="" class="h-7 w-auto object-contain"></button>
+                <button class="text-gray-800 p-2"><img src="options.png" alt="" class="h-7 w-auto object-contain"></button>
             </header>
             
             <div id="checklist-items" class="flex flex-col gap-3 pb-24"></div>
 
             <div class="fixed bottom-10 left-0 w-full flex justify-center pointer-events-none z-10 pl-16">
                 <button onclick="addChecklistItem()" class="w-12 h-12 bg-[#CC1919] text-white rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition-transform pointer-events-auto">
-                    <img src="icons/plus-white.png" alt="" class="w-6 h-6 object-contain">
+                    <img src="plus-white.png" alt="" class="w-6 h-6 object-contain">
                 </button>
             </div>
         </div>
@@ -220,16 +220,16 @@
                     <div class="absolute -bottom-2 left-0 w-full h-[2px] bg-black"></div>
                 </div>
                 <div class="flex items-center gap-3 text-gray-700">
-                    <button class="hover:text-black"><img src="icons/search.png" alt="" class="w-6 h-6 object-contain"></button>
-                    <button class="hover:text-black"><img src="icons/view.png" alt="" class="w-6 h-6 object-contain"></button>
-                    <button class="hover:text-black"><img src="icons/options.png" alt="" class="h-7 w-auto object-contain"></button>
+                    <button class="hover:text-black"><img src="search.png" alt="" class="w-6 h-6 object-contain"></button>
+                    <button class="hover:text-black"><img src="view.png" alt="" class="w-6 h-6 object-contain"></button>
+                    <button class="hover:text-black"><img src="options.png" alt="" class="h-7 w-auto object-contain"></button>
                 </div>
             </header>
 
             <div class="w-full bg-[#B3B3B3] rounded-full py-2 flex justify-between items-center shadow-inner mb-6 px-4">
-                <button onclick="changeMonth(-1)" class="text-gray-700 hover:text-black p-1"><img src="icons/back.png" alt="" class="w-5 h-5 object-contain"></button>
+                <button onclick="changeMonth(-1)" class="text-gray-700 hover:text-black p-1"><img src="back.png" alt="" class="w-5 h-5 object-contain"></button>
                 <span id="cal-month-year" class="font-medium text-gray-800 tracking-wide capitalize">Octubre 2026</span>
-                <button onclick="changeMonth(1)" class="text-gray-700 hover:text-black p-1"><img src="icons/next.png" alt="" class="w-5 h-5 object-contain"></button>
+                <button onclick="changeMonth(1)" class="text-gray-700 hover:text-black p-1"><img src="next.png" alt="" class="w-5 h-5 object-contain"></button>
             </div>
 
             <!-- Zona Swipe Calendario -->
@@ -271,14 +271,14 @@
                         <div id="plant-timer" class="text-4xl font-bold tabular-nums tracking-tight text-gray-900">00:00:00</div>
                     </div>
                     <button id="plant-toggle" onclick="togglePlantTimer()" aria-label="Iniciar o pausar" class="w-16 h-16 rounded-full bg-[#CC1919] text-white shadow-lg shadow-red-900/30 flex items-center justify-center hover:scale-105 transition-transform">
-                        <img id="plant-toggle-icon" src="icons/play.png" alt="" class="w-8 h-8 object-contain">
+                        <img id="plant-toggle-icon" src="play.png" alt="" class="w-8 h-8 object-contain">
                     </button>
                 </div>
                 <div class="text-sm text-gray-500 mt-3">Hoy has estudiado <span id="plant-today" class="font-semibold text-gray-800">0 min</span></div>
             </div>
 
             <button id="plant-water" onclick="waterPlant()" class="w-full rounded-[24px] py-4 bg-[#1A1A1A] text-white font-bold text-lg flex items-center justify-center gap-2 shadow-md transition-all">
-                <img src="icons/drop-white.png" alt="" class="w-6 h-6 object-contain"><span id="plant-water-label">Regar</span>
+                <img src="drop-white.png" alt="" class="w-6 h-6 object-contain"><span id="plant-water-label">Regar</span>
             </button>
             <p class="text-xs text-gray-400 text-center mt-3 pb-8">Cada hora de estudio te da un riego. Riega para que la planta crezca.</p>
         </div>
@@ -296,27 +296,27 @@
 
             <!-- Iconos anclados exactamente a los ángulos trigonométricos (0°, 30°, 60°, 90°) -->
             <button onclick="createNewNote('text')" class="absolute text-[#1C1C1E] hover:scale-110 transition-transform pointer-events-auto z-10 translate-x-1/2 translate-y-1/2" style="bottom: 32px; right: 224px;" title="Nota">
-                <img src="icons/note.png" alt="" class="w-8 h-8 object-contain">
+                <img src="note.png" alt="" class="w-8 h-8 object-contain">
             </button>
             <button onclick="openTableModal()" class="absolute text-[#1C1C1E] hover:scale-110 transition-transform pointer-events-auto z-10 translate-x-1/2 translate-y-1/2" style="bottom: 128px; right: 198.27px;" title="Tabla">
-                <img src="icons/table.png" alt="" class="w-8 h-8 object-contain">
+                <img src="table.png" alt="" class="w-8 h-8 object-contain">
             </button>
             <button onclick="createNewNote('checklist')" class="absolute text-[#1C1C1E] hover:scale-110 transition-transform pointer-events-auto z-10 translate-x-1/2 translate-y-1/2" style="bottom: 198.27px; right: 128px;" title="Checklist">
-                <img src="icons/checklist.png" alt="" class="w-8 h-8 object-contain">
+                <img src="checklist.png" alt="" class="w-8 h-8 object-contain">
             </button>
             <button onclick="navTo('calendar')" class="absolute text-[#1C1C1E] hover:scale-110 transition-transform pointer-events-auto z-10 translate-x-1/2 translate-y-1/2" style="bottom: 224px; right: 32px;" title="Recordatorio">
-                <img src="icons/bell.png" alt="" class="w-8 h-8 object-contain">
+                <img src="bell.png" alt="" class="w-8 h-8 object-contain">
             </button>
         </div>
 
         <!-- FAB Principal (Lápiz) -->
         <button id="main-fab" onclick="handleFabClick(event)" class="absolute bottom-0 right-0 w-16 h-16 bg-[#CC1919] text-white rounded-full shadow-xl shadow-red-900/30 flex items-center justify-center hover:scale-105 transition-transform z-20 pointer-events-auto hidden">
-            <img id="main-fab-pencil" src="icons/pencil.png" alt="" class="w-8 h-8 object-contain"><img id="main-fab-icon" src="icons/check.png" alt="" class="w-8 h-8 object-contain hidden">
+            <img id="main-fab-pencil" src="pencil.png" alt="" class="w-8 h-8 object-contain"><img id="main-fab-icon" src="check.png" alt="" class="w-8 h-8 object-contain hidden">
         </button>
 
         <!-- FAB Específico de Calendario (+) -->
         <button id="cal-add-fab" onclick="addReminder()" class="absolute bottom-0 right-0 w-16 h-16 bg-[#CC1919] text-white rounded-full shadow-xl shadow-red-900/30 flex items-center justify-center hover:scale-105 transition-transform z-20 pointer-events-auto">
-            <img src="icons/plus-white.png" alt="" class="w-8 h-8 object-contain">
+            <img src="plus-white.png" alt="" class="w-8 h-8 object-contain">
         </button>
     </div>
 
@@ -330,17 +330,17 @@
             <div class="flex items-center justify-between mb-4">
                 <span class="text-gray-700">Filas</span>
                 <div class="flex items-center gap-3">
-                    <button onclick="adjTable('row', -1)" class="text-gray-800"><img src="icons/back.png" alt="" class="w-5 h-5 object-contain"></button>
+                    <button onclick="adjTable('row', -1)" class="text-gray-800"><img src="back.png" alt="" class="w-5 h-5 object-contain"></button>
                     <div class="bg-white w-10 text-center py-0.5 rounded-full text-sm font-medium" id="val-rows">2</div>
-                    <button onclick="adjTable('row', 1)" class="text-gray-800"><img src="icons/next.png" alt="" class="w-5 h-5 object-contain"></button>
+                    <button onclick="adjTable('row', 1)" class="text-gray-800"><img src="next.png" alt="" class="w-5 h-5 object-contain"></button>
                 </div>
             </div>
             <div class="flex items-center justify-between mb-8">
                 <span class="text-gray-700">Columnas</span>
                 <div class="flex items-center gap-3">
-                    <button onclick="adjTable('col', -1)" class="text-gray-800"><img src="icons/back.png" alt="" class="w-5 h-5 object-contain"></button>
+                    <button onclick="adjTable('col', -1)" class="text-gray-800"><img src="back.png" alt="" class="w-5 h-5 object-contain"></button>
                     <div class="bg-white w-10 text-center py-0.5 rounded-full text-sm font-medium" id="val-cols">2</div>
-                    <button onclick="adjTable('col', 1)" class="text-gray-800"><img src="icons/next.png" alt="" class="w-5 h-5 object-contain"></button>
+                    <button onclick="adjTable('col', 1)" class="text-gray-800"><img src="next.png" alt="" class="w-5 h-5 object-contain"></button>
                 </div>
             </div>
             <div class="flex justify-end mt-2">
@@ -551,7 +551,7 @@
                 const textClasses = isSidebarOpen ? 'w-auto ml-4 opacity-100' : 'opacity-0 w-0 ml-0';
                 container.innerHTML += `
                 <button class="flex items-center text-gray-800 w-full px-1 py-1 overflow-hidden group">
-                    <img src="icons/folder-${folder.color.replace('#','').toLowerCase()}.png" alt="" onerror="this.onerror=null;this.src='icons/folder.png'" class="w-8 h-8 object-contain shrink-0 transition-transform group-hover:scale-110">
+                    <img src="folder-${folder.color.replace('#','').toLowerCase()}.png" alt="" onerror="this.onerror=null;this.src='folder.png'" class="w-8 h-8 object-contain shrink-0 transition-transform group-hover:scale-110">
                     <span class="sidebar-text ${textClasses} font-medium whitespace-nowrap overflow-hidden transition-all duration-200 group-hover:text-black">${esc(folder.name)}</span>
                 </button>`;
             });
@@ -589,7 +589,7 @@
                 .sort((a,b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || b.updatedAt - a.updatedAt);
 
             if (visibleNotes.length === 0) {
-                container.innerHTML = `<div class="${isGridView ? 'col-span-2 ' : ''}text-center text-gray-500 py-16"><img src="icons/note.png" alt="" class="w-10 h-10 object-contain opacity-30 mx-auto mb-2"><p class="text-sm font-medium">${searchQuery ? 'Ninguna nota coincide con tu búsqueda.' : 'Aún no hay notas. Toca el lápiz para crear la primera.'}</p></div>`;
+                container.innerHTML = `<div class="${isGridView ? 'col-span-2 ' : ''}text-center text-gray-500 py-16"><img src="note.png" alt="" class="w-10 h-10 object-contain opacity-30 mx-auto mb-2"><p class="text-sm font-medium">${searchQuery ? 'Ninguna nota coincide con tu búsqueda.' : 'Aún no hay notas. Toca el lápiz para crear la primera.'}</p></div>`;
                 return;
             }
             
@@ -600,7 +600,7 @@
                 let snippet = '';
                 if(note.type === 'checklist') {
                     const done = note.items.filter(i => i.checked).length;
-                    snippet = `<div class="text-sm text-gray-500 mt-2 flex items-center gap-1"><img src="icons/checklist.png" alt="" class="w-4 h-4 object-contain"> ${done}/${note.items.length} completados</div>`;
+                    snippet = `<div class="text-sm text-gray-500 mt-2 flex items-center gap-1"><img src="checklist.png" alt="" class="w-4 h-4 object-contain"> ${done}/${note.items.length} completados</div>`;
                 } else {
                     const cleanText = esc(plain((note.content || '').replace(/<\/(p|div|tr|br)>|<br\s*\/?>/gi, ' ')));
                     snippet = `<div class="text-[13px] text-gray-700 mt-2 line-clamp-4 leading-relaxed">${cleanText || '...'}</div>`;
@@ -610,7 +610,7 @@
                 const dateStr = d.toLocaleDateString('es-ES', { day:'2-digit', month:'short' });
 
                 card.innerHTML = `
-                    <div class="text-xs text-gray-400 mb-1 font-medium flex items-center justify-between">${dateStr}${note.pinned ? '<img src="icons/pin.png" alt="" class="w-4 h-4 object-contain">' : ''}</div>
+                    <div class="text-xs text-gray-400 mb-1 font-medium flex items-center justify-between">${dateStr}${note.pinned ? '<img src="pin.png" alt="" class="w-4 h-4 object-contain">' : ''}</div>
                     ${note.title ? `<strong class="block text-base text-gray-900 truncate tracking-tight">${esc(note.title)}</strong>` : ''}
                     ${snippet}
                 `;
@@ -739,7 +739,7 @@
                 div.innerHTML = `
                     <button onclick="toggleCheckRow(this)" class="w-7 h-7 rounded-full border-[3px] border-[#1C1C1E] flex items-center justify-center shrink-0 transition-all">${dot}</button>
                     <input type="text" class="flex-1 outline-none text-gray-800 text-lg font-medium bg-transparent" value="${esc(item.text)}" placeholder="...">
-                    <button onclick="deleteCheckRow(this)" class="text-gray-300 hover:text-red-500 shrink-0 px-2 transition-colors"><img src="icons/close.png" alt="" class="w-5 h-5 object-contain opacity-40 hover:opacity-100 transition-opacity"></button>
+                    <button onclick="deleteCheckRow(this)" class="text-gray-300 hover:text-red-500 shrink-0 px-2 transition-colors"><img src="close.png" alt="" class="w-5 h-5 object-contain opacity-40 hover:opacity-100 transition-opacity"></button>
                 `;
                 container.appendChild(div);
             });
@@ -762,7 +762,7 @@
             div.innerHTML = `
                 <button onclick="toggleCheckRow(this)" class="w-7 h-7 rounded-full border-[3px] border-[#1C1C1E] flex items-center justify-center shrink-0 transition-all"></button>
                 <input type="text" class="flex-1 outline-none text-gray-800 text-lg font-medium bg-transparent" placeholder="...">
-                <button onclick="deleteCheckRow(this)" class="text-gray-300 hover:text-red-500 shrink-0 px-2 transition-colors"><img src="icons/close.png" alt="" class="w-5 h-5 object-contain opacity-40 hover:opacity-100 transition-opacity"></button>
+                <button onclick="deleteCheckRow(this)" class="text-gray-300 hover:text-red-500 shrink-0 px-2 transition-colors"><img src="close.png" alt="" class="w-5 h-5 object-contain opacity-40 hover:opacity-100 transition-opacity"></button>
             `;
             container.appendChild(div);
             div.querySelector('input').focus();
@@ -951,14 +951,14 @@
             let html = `<h3 class="text-gray-800 text-sm font-semibold mb-2 ml-1 mt-2">${selectedDate.getDate()} de ${monthNames[selectedDate.getMonth()]} - Recordatorios</h3>`;
             
             if (dayReminders.length === 0) {
-                html += `<div class="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center text-gray-400 min-h-[100px]"><img src="icons/bell-off.png" alt="" class="w-8 h-8 object-contain opacity-30 mb-2"><p class="text-sm font-medium">No hay recordatorios.</p></div>`;
+                html += `<div class="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center text-gray-400 min-h-[100px]"><img src="bell-off.png" alt="" class="w-8 h-8 object-contain opacity-30 mb-2"><p class="text-sm font-medium">No hay recordatorios.</p></div>`;
             } else {
                 dayReminders.forEach(rem => {
                     html += `
                     <div class="bg-white rounded-[20px] p-4 shadow-sm border border-gray-100 flex gap-3 relative group items-start transition-shadow hover:shadow-md">
                         <div class="w-3 h-3 rounded-full bg-[#CC1919] mt-1.5 shrink-0 shadow-sm shadow-red-900/20"></div>
                         <div contenteditable="true" onblur="updateReminder('${rem.id}', this.innerText)" class="flex-1 outline-none min-h-[1.5rem] text-gray-800 font-medium whitespace-pre-wrap">${esc(rem.content)}</div>
-                        <button onclick="deleteNote('${rem.id}')" class="text-gray-300 hover:text-[#CC1919] shrink-0 transition-colors ml-2"><img src="icons/close.png" alt="" class="w-5 h-5 object-contain opacity-40 hover:opacity-100 transition-opacity"></button>
+                        <button onclick="deleteNote('${rem.id}')" class="text-gray-300 hover:text-[#CC1919] shrink-0 transition-colors ml-2"><img src="close.png" alt="" class="w-5 h-5 object-contain opacity-40 hover:opacity-100 transition-opacity"></button>
                     </div>`;
                 });
             }
@@ -1052,7 +1052,7 @@
             const art = document.getElementById('plant-art');
             for (let i = 0; i < 4; i++) {
                 const d = document.createElement('img');
-                d.src = 'icons/drop.png';
+                d.src = 'drop.png';
                 d.className = 'w-6 h-6 drop-fx';
                 d.style.left = (30 + i * 28) + '%';
                 d.style.animationDelay = (i * 0.12) + 's';
@@ -1128,7 +1128,7 @@
             const today = (plant.log[getFormatDateStr(new Date())] || 0) + liveMs();
             document.getElementById('plant-timer').textContent = fmtClock(liveMs());
             document.getElementById('plant-today').textContent = fmtMin(today);
-            const tg = document.getElementById('plant-toggle-icon'), want = plant.startTs ? 'icons/pause.png' : 'icons/play.png';
+            const tg = document.getElementById('plant-toggle-icon'), want = plant.startTs ? 'pause.png' : 'play.png';
             if (!tg.src.endsWith(want)) tg.src = want;
             const btn = document.getElementById('plant-water');
             btn.disabled = avail < 1;
